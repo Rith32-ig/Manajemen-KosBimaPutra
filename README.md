@@ -1,2 +1,2 @@
 # Manajemen-KosBimaPutra
-Repositori ini adalah penyimpanan bersmaa proyek kelompok 4
+Repositori ini adalah penyimpanan bersama proyek kelompok 4
