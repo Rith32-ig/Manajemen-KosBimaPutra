@@ -10,7 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList, Role } from './RootNavigator';
+import type { RootStackParamList } from './RootNavigator';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -150,7 +150,7 @@ export default function LandingScreen({ navigation }: Props) {
   const floatChip = useFloat(5000);
   const galW = (width - 48 - 14) / 2;
 
-  const toLogin = (role: Role) => navigation.navigate('Login', { role });
+  const toLogin = () => navigation.navigate('Login');
 
   const header = (
     <View style={s.wrap}>
@@ -165,8 +165,7 @@ export default function LandingScreen({ navigation }: Props) {
         </Txt>
 
         <View style={s.hbtns}>
-          <CustomButton title="Masuk sebagai Penghuni" icon="log-in-outline" size="lg" onPress={() => toLogin('Penghuni')} />
-          <CustomButton title="Masuk sebagai Pengelola" icon="shield-checkmark-outline" type="ghost" size="lg" onPress={() => toLogin('Pengelola')} />
+          <CustomButton title="Masuk" icon="log-in-outline" size="lg" onPress={toLogin} />
         </View>
 
         <View style={s.stats}>
@@ -223,8 +222,7 @@ export default function LandingScreen({ navigation }: Props) {
             Pengelola dan penghuni dapat mengakses pembayaran, kuitansi digital, dan laporan keluhan dalam satu sistem.
           </Txt>
           <View style={s.ctaBtns}>
-            <CustomButton title="Masuk Penghuni" type="glass" size="lg" onPress={() => toLogin('Penghuni')} />
-            <CustomButton title="Masuk Pengelola" type="light" size="lg" onPress={() => toLogin('Pengelola')} />
+            <CustomButton title="Masuk" type="light" size="lg" onPress={toLogin} />
           </View>
         </LinearGradient>
       </View>
@@ -246,8 +244,7 @@ export default function LandingScreen({ navigation }: Props) {
           <Ionicons name="home" size={18} color={C.navy} />
           <Txt style={s.brand}>Kos Bima Putra</Txt>
         </View>
-        <CustomButton title="Penghuni" icon="log-in-outline" type="ghost" size="sm" onPress={() => toLogin('Penghuni')} />
-        <CustomButton title="Pengelola" icon="log-in-outline" size="sm" onPress={() => toLogin('Pengelola')} style={{ marginLeft: 8 }} />
+        <CustomButton title="Masuk" icon="log-in-outline" size="sm" onPress={toLogin} />
       </View>
 
       {/* Fasilitas = FlatList; hero di header, galeri/CTA di footer */}

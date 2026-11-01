@@ -1,8 +1,7 @@
 /* === ANGGOTA 1: FARID — SCREEN 2: HALAMAN LOGIN ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini.
    Akun dummy -> Pengelola: pengelola / pengelola123 | Penghuni: penghuni / penghuni123 */
-import React, { useEffect, useState } from 'react';
-import type { ComponentProps } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, Image, TextInput, ScrollView, Pressable, StatusBar, StyleSheet,
 } from 'react-native';
@@ -11,20 +10,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { RootStackParamList, Role } from './RootNavigator';
+import type { RootStackParamList } from './RootNavigator';
 
 /* ============ TIPE ============ */
-type IconName = ComponentProps<typeof Ionicons>['name'];
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
-type Akun = { username: string; password: string };
-type Teks = {
-  sub: string;
-  side: string;
-  badge: string;
-  badgeIcon: IconName;
-  placeholder: string;
-  target: 'AdminTabs' | 'PenghuniTabs';
-};
+type Peran = 'Pengelola' | 'Penghuni';
+type Akun = { username: string; password: string; peran: Peran };
 type InputProps = Omit<TextInputProps, 'style'> & {
   label?: string;
   error?: string | boolean | null;
@@ -43,34 +34,18 @@ const G_START = { x: 0, y: 0 };
 const G_END = { x: 1, y: 1 };
 
 /* ============ DATA DUMMY ============ */
-const ACCOUNTS: Record<Role, Akun> = {
-  Pengelola: { username: 'pengelola', password: 'pengelola123' },
-  Penghuni: { username: 'penghuni', password: 'penghuni123' },
+// satu form login untuk semua peran: peran ditentukan dari akun yang cocok
+const ACCOUNTS: Akun[] = [
+  { username: 'pengelola', password: 'pengelola123', peran: 'Pengelola' },
+  { username: 'penghuni', password: 'penghuni123', peran: 'Penghuni' },
+];
+
+const TARGET: Record<Peran, 'AdminTabs' | 'PenghuniTabs'> = {
+  Pengelola: 'AdminTabs',
+  Penghuni: 'PenghuniTabs',
 };
 
-const BG: Record<Role, ImageSourcePropType> = {
-  Pengelola: require('../../assets/img/depan.jpg'),
-  Penghuni: require('../../assets/img/halaman.jpg'),
-};
-
-const COPY: Record<Role, Teks> = {
-  Pengelola: {
-    sub: 'Khusus pengelola kos',
-    side: 'Kelola data penghuni, pembayaran, kuitansi, dan keluhan dalam satu tempat.',
-    badge: 'Area Pengelola',
-    badgeIcon: 'construct',
-    placeholder: 'Username pengelola',
-    target: 'AdminTabs',
-  },
-  Penghuni: {
-    sub: 'Khusus penghuni kos',
-    side: 'Lihat sisa masa sewa, tagihan, dan laporkan masalah kos dengan mudah.',
-    badge: 'Area Penghuni',
-    badgeIcon: 'home',
-    placeholder: 'Username penghuni',
-    target: 'PenghuniTabs',
-  },
-};
+const BG: ImageSourcePropType = require('../../assets/img/depan.jpg');
 
 /* ============ KOMPONEN RE-USABLE ============ */
 function Txt({ style, ...props }: TextProps) {
@@ -129,26 +104,13 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
 }
 
 /* ============ SCREEN ============ */
-export default function LoginScreen({ navigation, route }: Props) {
-  const requested = route.params?.role;
-  const role: Role = requested && ACCOUNTS[requested] ? requested : 'Pengelola';
-  const c = COPY[role];
-
+export default function LoginScreen({ navigation }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [remember, setRemember] = useState(true);
   const [errUser, setErrUser] = useState<string | null>(null);
   const [errPass, setErrPass] = useState<string | null>(null);
   const [errAll, setErrAll] = useState('');
-
-  // ganti peran -> kosongkan form
-  useEffect(() => {
-    setUsername('');
-    setPassword('');
-    setErrUser(null);
-    setErrPass(null);
-    setErrAll('');
-  }, [role]);
 
   const doLogin = () => {
     const u = username.trim().toLowerCase();
@@ -157,19 +119,19 @@ export default function LoginScreen({ navigation, route }: Props) {
     setErrPass(password ? null : 'Kata sandi wajib diisi');
     if (!u || !password) return;
 
-    const acc = ACCOUNTS[role];
-    if (u !== acc.username || password !== acc.password) {
+    const akun = ACCOUNTS.find((a) => a.username === u && a.password === password);
+    if (!akun) {
       setErrAll('Username atau kata sandi salah');
       return;
     }
-    // masuk ke area sesuai peran; reset supaya tombol back tidak kembali ke login
-    navigation.reset({ index: 0, routes: [{ name: c.target }] });
+    // masuk ke area sesuai peran akun; reset supaya tombol back tidak kembali ke login
+    navigation.reset({ index: 0, routes: [{ name: TARGET[akun.peran] }] });
   };
 
   return (
     <View style={s.root}>
       <StatusBar barStyle="light-content" />
-      <Image source={BG[role]} style={s.bg} resizeMode="cover" />
+      <Image source={BG} style={s.bg} resizeMode="cover" />
       <LinearGradient
         colors={['rgba(15,23,42,0.88)', 'rgba(30,41,59,0.55)']}
         start={{ x: 0, y: 0 }}
@@ -182,22 +144,22 @@ export default function LoginScreen({ navigation, route }: Props) {
           <View style={s.side}>
             <Ionicons name="home" size={40} color="#fff" />
             <Txt style={s.sideH}>Kos Bima Putra</Txt>
-            <Txt style={s.sideP}>{c.side}</Txt>
+            <Txt style={s.sideP}>Kelola data, pembayaran, dan keluhan kos dalam satu aplikasi. Sistem mengenali peran Anda dari akun yang digunakan.</Txt>
           </View>
 
           <View style={s.form}>
-            <Txt style={s.h2}>Masuk {role}</Txt>
-            <Txt style={s.sub}>{c.sub}</Txt>
+            <Txt style={s.h2}>Masuk</Txt>
+            <Txt style={s.sub}>Gunakan akun penghuni atau pengelola</Txt>
             <View style={{ marginTop: 14 }}>
               <View style={s.badgeRow}>
-                <Ionicons name={c.badgeIcon} size={12} color={C.acc} />
-                <Txt style={s.badgeTxt}>{c.badge}</Txt>
+                <Ionicons name="people" size={12} color={C.acc} />
+                <Txt style={s.badgeTxt}>Penghuni &amp; Pengelola</Txt>
               </View>
             </View>
 
             <CustomInput
               label="Username"
-              placeholder={c.placeholder}
+              placeholder="Masukkan username"
               value={username}
               onChangeText={(t) => { setUsername(t); setErrUser(null); setErrAll(''); }}
               error={errUser || !!errAll}
@@ -249,7 +211,7 @@ const s = StyleSheet.create({
 
   /* layar */
   root: { flex: 1, backgroundColor: C.navy },
-  bg: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
+  bg: { ...StyleSheet.absoluteFill, width: '100%', height: '100%' },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: 16 },
   side: { padding: 22, gap: 10 },
   sideH: {

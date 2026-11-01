@@ -1,6 +1,6 @@
 /* === ANGGOTA 4: HANIFA (PENGELOLA) — SCREEN 7: PEMBAYARAN & KUITANSI ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import {
   View, Text, TextInput, Pressable, SectionList, Share, Animated, KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
@@ -12,10 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
-type Tone = 'ok' | 'wn';
+type Tone = 'ok' | 'wn' | 'er';
 type ButtonType = 'primary' | 'ghost' | 'wa';
 type Penghuni = { id: string; nama: string; kamar: string };
-type Transaksi = { id: string; nama: string; metode: string; nominal: string; periode: string };
+type Transaksi = { id: string; nama: string; metode: string; nilai: number; periode: string; bln: number; thn: number };
+type Rekap = { id: string; nama: string; kamar: string; sudah: boolean; nilai: number };
 type Telat = { id: string; label: string; info: string };
 type Seksi = { key: 'riwayat' | 'late'; title: string; data: (Transaksi | Telat)[] };
 type DataKuitansi = { nm: string; rm: string; kp: string; km: string; kt: string; tgl: string; kno: string };
@@ -24,7 +25,7 @@ type KuitansiTersimpan = { nm: string; kp: string; km: string; kt: string; kno: 
 /* ============ TEMA ============ */
 const C = {
   navy: '#1E293B', acc: '#2563EB', bg: '#F8FAFC', surf: '#FFFFFF', txt: '#1E293B', mut: '#64748B',
-  bd: '#E2E8F0', ok: '#16A34A', okb: '#DCFCE7', wn: '#B45309', wnb: '#FEF3C7', er: '#DC2626', accb: '#DBEAFE',
+  bd: '#E2E8F0', ok: '#16A34A', okb: '#DCFCE7', wn: '#B45309', wnb: '#FEF3C7', er: '#DC2626', erb: '#FEE2E2', accb: '#DBEAFE',
 };
 const F = { regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'Inter_600SemiBold', bold: 'Inter_700Bold' };
 const FAMILY: Record<string, string> = { normal: F.regular, 400: F.regular, 500: F.medium, 600: F.semibold, 700: F.bold, bold: F.bold, 800: F.bold };
@@ -41,11 +42,26 @@ const RESIDENTS: Penghuni[] = [
   { id: 'r3', nama: 'Budi Santoso', kamar: 'A-11' },
   { id: 'r4', nama: 'Dewi Lestari', kamar: 'C-02' },
   { id: 'r5', nama: 'Rizky Fadilah', kamar: 'B-02' },
+  { id: 'r6', nama: 'Maya Putri', kamar: 'C-09' },
 ];
 
+const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const TAHUN = ['2025', '2026', '2027'];
+
+// bln = indeks bulan (0-11), thn = tahun; dipakai untuk rekap sudah/belum bayar
+const trx = (id: string, nama: string, metode: string, nilai: number, bln: number, thn: number): Transaksi => ({
+  id, nama, metode, nilai, bln, thn, periode: `${BULAN[bln]} ${thn}`,
+});
+
 const PAYMENTS: Transaksi[] = [
-  { id: 'p1', nama: 'Andi Pratama', metode: 'Transfer', nominal: 'Rp 1.200.000', periode: 'Okt 2026' },
-  { id: 'p2', nama: 'Dewi Lestari', metode: 'Cash', nominal: 'Rp 350.000', periode: 'Okt 2026' },
+  trx('p1', 'Andi Pratama', 'Transfer', 1200000, 9, 2026),
+  trx('p2', 'Siti Nurhaliza', 'Transfer', 1200000, 9, 2026),
+  trx('p3', 'Dewi Lestari', 'Cash', 350000, 9, 2026),
+  trx('p4', 'Andi Pratama', 'Transfer', 1200000, 8, 2026),
+  trx('p5', 'Siti Nurhaliza', 'Transfer', 1200000, 8, 2026),
+  trx('p6', 'Budi Santoso', 'Cash', 1200000, 8, 2026),
+  trx('p7', 'Dewi Lestari', 'Cash', 350000, 8, 2026),
+  trx('p8', 'Rizky Fadilah', 'Transfer', 1200000, 8, 2026),
 ];
 
 const LATE: Telat[] = [
@@ -58,7 +74,6 @@ const LATE: Telat[] = [
 // 1200000 -> "Rp 1.200.000" (tanpa Intl, aman di Hermes Android)
 const formatRupiah = (n: number | string) => 'Rp ' + String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
-const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 const tanggalPanjang = (d: Date = new Date()) => `${d.getDate()} ${BULAN[d.getMonth()]} ${d.getFullYear()}`;
 
 /* ============ KOMPONEN RE-USABLE ============ */
@@ -67,7 +82,7 @@ function Txt({ style, ...props }: TextProps) {
   return <Text {...props} style={[{ fontFamily: FAMILY[String(fontWeight || '400')], color: C.txt }, rest]} />;
 }
 
-const TONES: Record<Tone, { bg: string; fg: string }> = { ok: { bg: C.okb, fg: C.ok }, wn: { bg: C.wnb, fg: C.wn } };
+const TONES: Record<Tone, { bg: string; fg: string }> = { ok: { bg: C.okb, fg: C.ok }, wn: { bg: C.wnb, fg: C.wn }, er: { bg: C.erb, fg: C.er } };
 
 function Badge({ text, tone = 'ok' }: { text: string; tone?: Tone }) {
   const t = TONES[tone];
@@ -306,12 +321,33 @@ export default function PembayaranScreen() {
   const [penghuni, setPenghuni] = useState(options[0]);
   const [tipe, setTipe] = useState('Bulanan');
   const [metode, setMetode] = useState('Transfer');
-  const [periode, setPeriode] = useState('Oktober 2026');
+  const [bln, setBln] = useState('Oktober');
+  const [thn, setThn] = useState('2026');
+  const periode = `${bln} ${thn}`;
+  // filter rekap sudah / belum bayar
+  const [fBln, setFBln] = useState('Oktober');
+  const [fThn, setFThn] = useState('2026');
+  const [fStatus, setFStatus] = useState('Semua');
   const [nominal, setNominal] = useState('1200000');
   const [errNominal, setErrNominal] = useState<string | null>(null);
   const [saved, setSaved] = useState<KuitansiTersimpan | null>(null); // snapshot kuitansi yang sudah disimpan
 
   const [nm, rm] = penghuni.split(' · ');
+
+  // rekap: penghuni dianggap "sudah bayar" bila ada transaksi pada bulan & tahun yang difilter
+  const fb = BULAN.indexOf(fBln);
+  const ft = Number(fThn);
+  const rekap = useMemo<Rekap[]>(
+    () =>
+      RESIDENTS.map((r) => {
+        const t = payments.find((p) => p.nama === r.nama && p.bln === fb && p.thn === ft);
+        return { id: r.id, nama: r.nama, kamar: r.kamar, sudah: !!t, nilai: t ? t.nilai : 0 };
+      }),
+    [payments, fb, ft]
+  );
+  const jmlSudah = rekap.filter((r) => r.sudah).length;
+  const totalMasuk = payments.filter((p) => p.bln === fb && p.thn === ft).reduce((sum, p) => sum + p.nilai, 0);
+  const daftar = rekap.filter((r) => fStatus === 'Semua' || (fStatus === 'Sudah bayar' ? r.sudah : !r.sudah));
 
   // kuitansi mengikuti form (live preview); nomor tetap bila sama dengan yang tersimpan
   const kt = formatRupiah(nominal);
@@ -326,7 +362,13 @@ export default function PembayaranScreen() {
       return;
     }
     setErrNominal(null);
-    setPayments((list) => [{ id: 'p' + Date.now(), nama: nm, metode, nominal: kt, periode }, ...list]);
+    setPayments((list) => [
+      { id: 'p' + Date.now(), nama: nm, metode, nilai: Number(nominal), periode, bln: BULAN.indexOf(bln), thn: Number(thn) },
+      ...list,
+    ]);
+    // rekap langsung menampilkan periode yang baru dicatat
+    setFBln(bln);
+    setFThn(thn);
     setSaved({ nm, kp, km: metode, kt, kno: nextNo });
     toast('Pembayaran tersimpan ✓');
   };
@@ -353,7 +395,10 @@ export default function PembayaranScreen() {
         <SegmentedControl options={['Bulanan', 'Harian']} value={tipe} onChange={setTipe} />
         <FieldLabel>Metode</FieldLabel>
         <SegmentedControl options={['Transfer', 'Cash']} value={metode} onChange={setMetode} />
-        <CustomInput label="Periode" value={periode} onChangeText={setPeriode} autoCapitalize="words" />
+        <View style={s.filterRow}>
+          <Select label="Bulan" value={bln} options={BULAN} onChange={setBln} style={{ flex: 1 }} />
+          <Select label="Tahun" value={thn} options={TAHUN} onChange={setThn} style={{ flex: 1 }} />
+        </View>
         <CustomInput
           label="Nominal (Rp)"
           value={nominal}
@@ -376,6 +421,42 @@ export default function PembayaranScreen() {
           <CustomButton title="Bagikan ke WhatsApp" icon="logo-whatsapp" type="wa" onPress={bagikan} />
         </View>
       </View>
+
+      {/* rekap pembayaran: sudah bayar vs belum bayar, filter bulan & tahun */}
+      <Txt style={[s.h2, { marginTop: 24 }]}>Rekap Pembayaran</Txt>
+      <CustomCard style={{ marginTop: 10 }}>
+        <View style={s.filterRow}>
+          <Select label="Bulan" value={fBln} options={BULAN} onChange={setFBln} style={{ flex: 1, marginTop: 0 }} />
+          <Select label="Tahun" value={fThn} options={TAHUN} onChange={setFThn} style={{ flex: 1, marginTop: 0 }} />
+        </View>
+
+        <View style={s.sumRow}>
+          <View style={[s.sumBox, { backgroundColor: C.okb }]}>
+            <Txt style={[s.sumNum, { color: C.ok }]}>{jmlSudah}</Txt>
+            <Txt style={s.sumLbl}>Sudah bayar</Txt>
+          </View>
+          <View style={[s.sumBox, { backgroundColor: C.erb }]}>
+            <Txt style={[s.sumNum, { color: C.er }]}>{rekap.length - jmlSudah}</Txt>
+            <Txt style={s.sumLbl}>Belum bayar</Txt>
+          </View>
+        </View>
+        <Txt style={s.small}>Total pemasukan {fBln} {fThn}: {formatRupiah(totalMasuk)}</Txt>
+
+        <View style={{ marginTop: 12 }}>
+          <SegmentedControl options={['Semua', 'Sudah bayar', 'Belum bayar']} value={fStatus} onChange={setFStatus} />
+        </View>
+
+        {daftar.map((r, i) => (
+          <View key={r.id} style={[s.rkRow, i > 0 && s.rkSep]}>
+            <View style={{ flex: 1 }}>
+              <Txt>{r.nama}</Txt>
+              <Txt style={s.small}>{r.kamar}{r.sudah ? ` · ${formatRupiah(r.nilai)}` : ''}</Txt>
+            </View>
+            <Badge text={r.sudah ? 'Sudah bayar' : 'Belum bayar'} tone={r.sudah ? 'ok' : 'er'} />
+          </View>
+        ))}
+        {daftar.length === 0 ? <Txt style={[s.small, { marginTop: 12 }]}>Tidak ada data untuk filter ini.</Txt> : null}
+      </CustomCard>
     </View>
   );
 
@@ -432,7 +513,7 @@ export default function PembayaranScreen() {
                     <Txt style={s.small}>{item.metode} · {item.periode}</Txt>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                    <Txt style={{ fontWeight: '700' }}>{item.nominal}</Txt>
+                    <Txt style={{ fontWeight: '700' }}>{formatRupiah(item.nilai)}</Txt>
                     <Badge text="Lunas" tone="ok" />
                   </View>
                 </View>
@@ -486,6 +567,15 @@ const s = StyleSheet.create({
   previewHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 24, marginBottom: 10 },
   desk: { backgroundColor: '#CBD5E1', borderRadius: 16, padding: 14, gap: 16 },
   acts: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10 },
+
+  /* rekap pembayaran */
+  filterRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  sumRow: { flexDirection: 'row', gap: 10, marginTop: 14, marginBottom: 8 },
+  sumBox: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  sumNum: { fontSize: 26, fontWeight: '700' },
+  sumLbl: { color: C.mut, fontSize: 12, marginTop: 2 },
+  rkRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10 },
+  rkSep: { borderTopWidth: 1, borderTopColor: C.bd },
 
   /* kertas kuitansi */
   paper: {

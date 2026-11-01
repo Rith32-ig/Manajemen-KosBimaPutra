@@ -17,8 +17,6 @@ import PembayaranScreen from './pengelola/PembayaranScreen';
 import KeluhanAdminScreen from './pengelola/KeluhanAdminScreen';
 
 /* ============ TIPE NAVIGASI (dipakai semua layar lewat `import type`) ============ */
-export type Role = 'Pengelola' | 'Penghuni';
-
 export type PenghuniTabParamList = {
   Beranda: { keluhanBaru?: Keluhan } | undefined;
   Lapor: undefined;
@@ -35,7 +33,7 @@ export type AdminTabParamList = {
 
 export type RootStackParamList = {
   Landing: undefined;
-  Login: { role: Role } | undefined;
+  Login: undefined;
   AdminTabs: NavigatorScreenParams<AdminTabParamList> | undefined;
   PenghuniTabs: NavigatorScreenParams<PenghuniTabParamList> | undefined;
 };
@@ -108,7 +106,7 @@ export default function RootNavigator() {
   return (
     <Stack.Navigator initialRouteName="Landing" screenOptions={{ headerShown: false, animation: 'none' }}>
       <Stack.Screen name="Landing" component={LandingScreen} />
-      <Stack.Screen name="Login" component={LoginScreen} initialParams={{ role: 'Pengelola' }} />
+      <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="AdminTabs" component={AdminTabs} />
       <Stack.Screen name="PenghuniTabs" component={PenghuniTabs} />
     </Stack.Navigator>

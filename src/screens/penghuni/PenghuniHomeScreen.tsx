@@ -1,7 +1,4 @@
-/* === ANGGOTA 2: DHIYAUL (PENGHUNI) — SCREEN 3: DASHBOARD PENGHUNI ===
-   File mandiri: UI + komponen kecil + data dummy ada di file ini.
-   Juga mengekspor PengumumanScreen (tab "Info") yang dipakai RootNavigator.
-   Keluhan baru dari LaporKeluhanScreen diterima lewat route.params.keluhanBaru. */
+
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ComponentProps, ComponentType, ReactElement, ReactNode } from 'react';
 import {
