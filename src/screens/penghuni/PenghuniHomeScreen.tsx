@@ -1,4 +1,3 @@
-
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ComponentProps, ComponentType, ReactElement, ReactNode } from 'react';
 import {
@@ -423,7 +422,7 @@ export default function PenghuniHomeScreen({ navigation, route }: Props) {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
@@ -481,7 +480,7 @@ export default function PenghuniHomeScreen({ navigation, route }: Props) {
 export function PengumumanScreen() {
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <FlatList
         data={ANNOUNCEMENTS}
         keyExtractor={(i) => i.id}

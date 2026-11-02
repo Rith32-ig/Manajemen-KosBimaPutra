@@ -46,7 +46,15 @@ const RESIDENTS: Penghuni[] = [
 ];
 
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-const TAHUN = ['2025', '2026', '2027'];
+// bulan & tahun diambil dari tanggal perangkat (Date), bukan ditulis tetap
+const SEKARANG = new Date();
+const BLN_INI = SEKARANG.getMonth(); // 0-11
+const THN_INI = SEKARANG.getFullYear();
+const BLN_LALU = (BLN_INI + 11) % 12;
+const THN_LALU = BLN_INI === 0 ? THN_INI - 1 : THN_INI;
+// daftar tahun: dari tahun mulai pemakaian sampai tahun sekarang (bertambah sendiri tiap tahun)
+const TAHUN_MULAI = 2025;
+const TAHUN = Array.from({ length: Math.max(1, THN_INI - TAHUN_MULAI + 1) }, (_, i) => String(TAHUN_MULAI + i));
 
 // bln = indeks bulan (0-11), thn = tahun; dipakai untuk rekap sudah/belum bayar
 const trx = (id: string, nama: string, metode: string, nilai: number, bln: number, thn: number): Transaksi => ({
@@ -54,14 +62,14 @@ const trx = (id: string, nama: string, metode: string, nilai: number, bln: numbe
 });
 
 const PAYMENTS: Transaksi[] = [
-  trx('p1', 'Andi Pratama', 'Transfer', 1200000, 9, 2026),
-  trx('p2', 'Siti Nurhaliza', 'Transfer', 1200000, 9, 2026),
-  trx('p3', 'Dewi Lestari', 'Cash', 350000, 9, 2026),
-  trx('p4', 'Andi Pratama', 'Transfer', 1200000, 8, 2026),
-  trx('p5', 'Siti Nurhaliza', 'Transfer', 1200000, 8, 2026),
-  trx('p6', 'Budi Santoso', 'Cash', 1200000, 8, 2026),
-  trx('p7', 'Dewi Lestari', 'Cash', 350000, 8, 2026),
-  trx('p8', 'Rizky Fadilah', 'Transfer', 1200000, 8, 2026),
+  trx('p1', 'Andi Pratama', 'Transfer', 1200000, BLN_INI, THN_INI),
+  trx('p2', 'Siti Nurhaliza', 'Transfer', 1200000, BLN_INI, THN_INI),
+  trx('p3', 'Dewi Lestari', 'Cash', 350000, BLN_INI, THN_INI),
+  trx('p4', 'Andi Pratama', 'Transfer', 1200000, BLN_LALU, THN_LALU),
+  trx('p5', 'Siti Nurhaliza', 'Transfer', 1200000, BLN_LALU, THN_LALU),
+  trx('p6', 'Budi Santoso', 'Cash', 1200000, BLN_LALU, THN_LALU),
+  trx('p7', 'Dewi Lestari', 'Cash', 350000, BLN_LALU, THN_LALU),
+  trx('p8', 'Rizky Fadilah', 'Transfer', 1200000, BLN_LALU, THN_LALU),
 ];
 
 const LATE: Telat[] = [
@@ -321,12 +329,12 @@ export default function PembayaranScreen() {
   const [penghuni, setPenghuni] = useState(options[0]);
   const [tipe, setTipe] = useState('Bulanan');
   const [metode, setMetode] = useState('Transfer');
-  const [bln, setBln] = useState('Oktober');
-  const [thn, setThn] = useState('2026');
+  const [bln, setBln] = useState(BULAN[BLN_INI]);
+  const [thn, setThn] = useState(String(THN_INI));
   const periode = `${bln} ${thn}`;
   // filter rekap sudah / belum bayar
-  const [fBln, setFBln] = useState('Oktober');
-  const [fThn, setFThn] = useState('2026');
+  const [fBln, setFBln] = useState(BULAN[BLN_INI]);
+  const [fThn, setFThn] = useState(String(THN_INI));
   const [fStatus, setFStatus] = useState('Semua');
   const [nominal, setNominal] = useState('1200000');
   const [errNominal, setErrNominal] = useState<string | null>(null);
@@ -352,7 +360,7 @@ export default function PembayaranScreen() {
   // kuitansi mengikuti form (live preview); nomor tetap bila sama dengan yang tersimpan
   const kt = formatRupiah(nominal);
   const kp = `Sewa ${tipe.toLowerCase()} – ${periode}`;
-  const nextNo = 'No. KW/2026/10/' + String(143 + payments.length + 1).padStart(4, '0');
+  const nextNo = `No. KW/${thn}/${String(BULAN.indexOf(bln) + 1).padStart(2, '0')}/` + String(143 + payments.length + 1).padStart(4, '0');
   const sameAsSaved = !!saved && saved.nm === nm && saved.kp === kp && saved.km === metode && saved.kt === kt;
   const kw: DataKuitansi = { nm, rm, kp, km: metode, kt, tgl: tanggalPanjang(), kno: sameAsSaved && saved ? saved.kno : nextNo };
 
@@ -467,7 +475,7 @@ export default function PembayaranScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <SectionList
           sections={sections}

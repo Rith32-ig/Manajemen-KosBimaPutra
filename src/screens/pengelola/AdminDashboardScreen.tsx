@@ -151,7 +151,7 @@ export default function AdminDashboardScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <FlatList
         data={DUE}
         keyExtractor={(i) => i.id}
