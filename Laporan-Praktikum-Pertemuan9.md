@@ -217,14 +217,14 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 | 17 | Atur Password penghuni, lalu login dengan password baru | Dawwas | Lolos |berhasil saya sudah nyoba ke penghuni nya |
 | 19 | Filter tipe sewa | Dawwas | Lolos | ![alt text](<Daftar penghuni & filter sewa.gif>) |
 | 20 | Ringkasan Dashboard dari database | Dawwas | Lolos | sudah teruji ada buktinya di c.4 dan c.5 |
-| 21 | Catat pembayaran dan buat kuitansi | Hanifa | BELUM DIUJI | |
-| 22 | Rekap sudah/belum bayar dengan filter bulan dan tahun | Hanifa | BELUM DIUJI | |
-| 23 | Perpindahan tahap keluhan (kanban) tersimpan | Hanifa | BELUM DIUJI | |
-| 24 | Catatan pengelola (tambah dan centang) tersimpan | Hanifa | BELUM DIUJI | |
-| 25 | Keluhan dari penghuni muncul di papan pengelola | Dhiyaul & Hanifa | BELUM DIUJI | |
-| 27 | Penghuni hanya melihat data miliknya (RLS) | Tim | BELUM DIUJI | |
-| 28 | Pembuktian RLS (hapus salah satu policy tulis → gagal, kembalikan → berhasil) | Tim | BELUM DIUJI | |
-| 29 | Edge Function menolak pemanggil selain pengelola | Tim | BELUM DIUJI | |
+| 21 | Catat pembayaran dan buat kuitansi | Hanifa | Lolos |![alt text](<uji21.gif>)|
+| 22 | Rekap sudah/belum bayar dengan filter bulan dan tahun | Hanifa | Lolos  |![alt text](<uji22.gif>) |
+| 23 | Perpindahan tahap keluhan (kanban) tersimpan | Hanifa | Lolos |![alt text](<uji23.gif>)|
+| 24 | Catatan pengelola (tambah dan centang) tersimpan | Hanifa | Lolos |![alt text](<uji24.gif>)|
+| 25 | Keluhan dari penghuni muncul di papan pengelola | Dhiyaul & Hanifa | Lolos |![alt text](<uji25.gif>)|
+| 26 | Penghuni hanya melihat data miliknya (RLS) | Tim | BELUM DIUJI | |
+| 27 | Pembuktian RLS (hapus salah satu policy tulis → gagal, kembalikan → berhasil) | Tim | BELUM DIUJI | |
+| 28 | Edge Function menolak pemanggil selain pengelola | Tim | BELUM DIUJI | |
 
 ### Batasan yang diketahui
 - **Izin Pulang Malam** dan **Unggah Bukti Bayar** pada Beranda penghuni masih berupa tampilan: tombol kirim hanya menampilkan notifikasi dan tidak menyimpan ke database maupun Supabase Storage. Kolom `bukti_pembayaran` sudah ada di skema untuk pengembangan lanjutan.
@@ -298,16 +298,16 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 ### Bagian D: Bukti Modul Pembayaran & Keluhan Pengelola (*Hanifa*)
 
 #### D.1 Tabel `pembayaran` di Supabase
-<!-- <div align="center"><img src="docs/bukti-table-pembayaran.png" width="75%" alt="Tabel Pembayaran Supabase"></div> -->
+![alt text](<Tabel_pembayaran.gif>)
 
 #### D.2 Catat Pembayaran dan Kuitansi
-<!-- <div align="center"><img src="docs/bukti-catat-pembayaran.gif" width="30%" alt="Catat Pembayaran dan Kuitansi"></div> -->
+![alt text](<uji21.gif>)
 
 #### D.3 Rekap Sudah/Belum Bayar (Filter Bulan dan Tahun)
-<!-- <div align="center"><img src="docs/bukti-rekap-pembayaran.gif" width="30%" alt="Rekap Pembayaran"></div> -->
+![alt text](<uji22.gif>)
 
 #### D.4 Papan Keluhan (Kanban) dan Catatan Pengelola
-<!-- <div align="center"><img src="docs/bukti-kanban-keluhan.gif" width="30%" alt="Kanban Keluhan"></div> -->
+![alt text](<uji24.gif>)
 
 ---
 
