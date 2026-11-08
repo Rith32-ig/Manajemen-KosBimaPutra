@@ -1,6 +1,6 @@
 /* === ANGGOTA 3: DAWWAS (PENGELOLA) — SCREEN 5: DASHBOARD PENGELOLA ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { ComponentProps, ReactNode } from 'react';
 import { View, Text, Pressable, FlatList, StatusBar, StyleSheet, useWindowDimensions } from 'react-native';
 import type { StyleProp, TextProps, TextStyle, ViewStyle } from 'react-native';
@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { AdminTabParamList } from '../RootNavigator';
+import { supabase, rupiah, BULAN, keluar, ambilProfil, profilSaatIni } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -25,17 +26,6 @@ const F = { regular: 'Inter_400Regular', medium: 'Inter_500Medium', semibold: 'I
 const FAMILY: Record<string, string> = { normal: F.regular, 400: F.regular, 500: F.medium, 600: F.semibold, 700: F.bold, bold: F.bold, 800: F.bold };
 const GRAD_PRIMARY = ['#1E293B', '#2563EB'] as const;
 const SHADOW_CARD = { shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
-
-/* ============ DATA DUMMY ============ */
-const DUE: Tagihan[] = [
-  { id: 'd1', nama: 'Siti Nurhaliza', kamar: 'B-07', tempo: '20 Okt', nominal: 'Rp 1.300.000', status: 'Menunggu' },
-  { id: 'd2', nama: 'Andi Pratama', kamar: 'A-03', tempo: '25 Okt', nominal: 'Rp 1.200.000', status: 'Lunas' },
-  { id: 'd3', nama: 'Maya Putri', kamar: 'C-09', tempo: '27 Okt', nominal: 'Rp 1.100.000', status: 'Menunggu' },
-  { id: 'd4', nama: 'Dewi Lestari', kamar: 'C-02', tempo: '28 Okt', nominal: 'Rp 350.000', status: 'Lunas' },
-];
-
-// jumlah tiket keluhan yang belum selesai (sama dengan papan keluhan pada KeluhanAdminScreen)
-const KELUHAN_AKTIF = 5;
 
 /* ============ KOMPONEN RE-USABLE ============ */
 function Txt({ style, ...props }: TextProps) {
@@ -98,45 +88,90 @@ export default function AdminDashboardScreen({ navigation }: Props) {
   const { width } = useWindowDimensions();
   const kpiW = (width - 36 - 14) / 2; // 2 kolom, gap 14
 
-  // keluar -> kembali ke Landing (stack induk di-reset)
-  const keluar = () => navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Landing' }] });
+  const [due, setDue] = useState<Tagihan[]>([]);
+  const [kpi, setKpi] = useState({ terisi: 0, total: 0, masuk: 0, masukLalu: 0, tunggak: 0, nilaiTunggak: 0, keluhan: 0 });
+  const [profil, setProfil] = useState(profilSaatIni());
+  const sekarang = new Date();
+  const bln = sekarang.getMonth() + 1;
+  const thn = sekarang.getFullYear();
+  const blnLalu = bln === 1 ? 12 : bln - 1;
+  const thnLalu = bln === 1 ? thn - 1 : thn;
+
+  const muat = useCallback(async () => {
+    const [km, pg, pb, kl, pr] = await Promise.all([
+      supabase.from('kamar').select('nomor_kamar,status_kamar,harga_sewa'),
+      supabase.from('penghuni').select('id,nama,nomor_kamar').eq('status_penghuni', 'Aktif').order('nomor_kamar'),
+      supabase.from('pembayaran').select('penghuni_id,jumlah_bayar,bulan_tagihan,tahun_tagihan,status_pembayaran').eq('status_pembayaran', 'Lunas'),
+      supabase.from('keluhan').select('id').neq('status_penanganan', 'Selesai'),
+      profil ? Promise.resolve(profil) : ambilProfil(),
+    ]);
+    if (km.error || pg.error || pb.error || kl.error) return;
+    setProfil(pr as any);
+    const harga: Record<string, number> = Object.fromEntries((km.data ?? []).map((k) => [k.nomor_kamar, Number(k.harga_sewa)]));
+    const lunasIni = new Set((pb.data ?? []).filter((p) => p.bulan_tagihan === bln && p.tahun_tagihan === thn).map((p) => p.penghuni_id));
+    const jml = (b: number, y: number) => (pb.data ?? []).filter((p) => p.bulan_tagihan === b && p.tahun_tagihan === y).reduce((s, p) => s + Number(p.jumlah_bayar), 0);
+    const belum = (pg.data ?? []).filter((r) => !lunasIni.has(r.id));
+    setKpi({
+      terisi: (km.data ?? []).filter((k) => k.status_kamar === 'Terisi').length, total: (km.data ?? []).length,
+      masuk: jml(bln, thn), masukLalu: jml(blnLalu, thnLalu),
+      tunggak: belum.length, nilaiTunggak: belum.reduce((s, r) => s + (harga[r.nomor_kamar] || 0), 0),
+      keluhan: (kl.data ?? []).length,
+    });
+    setDue((pg.data ?? []).map((r) => ({
+      id: r.id, nama: r.nama, kamar: r.nomor_kamar, tempo: `${BULAN[bln - 1]} ${thn}`,
+      nominal: rupiah(harga[r.nomor_kamar] || 0), status: lunasIni.has(r.id) ? 'Lunas' : 'Menunggu',
+    } as Tagihan)).sort((a, b) => (a.status === b.status ? 0 : a.status === 'Menunggu' ? -1 : 1)));
+  }, [bln, thn, blnLalu, thnLalu, profil]);
+  useEffect(() => { muat(); }, [muat]);
+
+  const DUE = due;
+  const pemilik = profil?.role === 'pemilik';
+  const persen = kpi.total ? Math.round((kpi.terisi / kpi.total) * 100) : 0;
+  const selisih = kpi.masukLalu ? Math.round(((kpi.masuk - kpi.masukLalu) / kpi.masukLalu) * 100) : null;
+  const juta = (n: number) => 'Rp ' + (n / 1_000_000).toFixed(2).replace('.', ',') + ' jt';
+
+  // keluar -> hapus sesi Supabase, kembali ke Landing
+  const doKeluar = async () => {
+    await keluar();
+    navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Landing' }] });
+  };
 
   const header = (
     <View>
       <View style={s.head}>
         <View style={{ flex: 1 }}>
-          <Txt style={s.h1}>Dashboard Pengelola</Txt>
-          <Txt style={s.sub}>Oktober 2026 · Kos Bima Putra, Jl. Perjuangan No. 72</Txt>
-          <Txt style={[s.sub, { marginTop: 2 }]}>Pengelola · Ibu Peni Azzam</Txt>
+          <Txt style={s.h1}>{pemilik ? 'Dashboard Pemilik' : 'Dashboard Pengelola'}</Txt>
+          <Txt style={s.sub}>{BULAN[bln - 1]} {thn} · Kos Bima Putra, Jl. Perjuangan No. 72</Txt>
+          <Txt style={[s.sub, { marginTop: 2 }]}>{pemilik ? 'Pemilik' : 'Pengelola'} · {profil?.nama ?? ''}</Txt>
         </View>
-        <GhostButton title="Keluar" icon="log-out-outline" onPress={keluar} />
+        <GhostButton title="Keluar" icon="log-out-outline" onPress={doKeluar} />
       </View>
 
       <View style={s.kpis}>
         <Kpi width={kpiW} accent={GRAD_PRIMARY}>
           <Txt style={s.kLabel}>Status Kamar</Txt>
-          <Txt style={s.kValue} numberOfLines={1} adjustsFontSizeToFit>29 / 35</Txt>
+          <Txt style={s.kValue} numberOfLines={1} adjustsFontSizeToFit>{kpi.terisi} / {kpi.total}</Txt>
           <View style={s.bar}>
-            <View style={[s.barFill, { width: '83%' }]} />
+            <View style={[s.barFill, { width: `${persen}%` }]} />
           </View>
-          <Txt style={[s.kLabel, { marginTop: 6 }]}>29 terisi · 6 kosong</Txt>
+          <Txt style={[s.kLabel, { marginTop: 6 }]}>{kpi.terisi} terisi · {kpi.total - kpi.terisi} tidak terisi</Txt>
         </Kpi>
 
         <Kpi width={kpiW} accent={['#16A34A', '#4ADE80']}>
           <Txt style={s.kLabel}>Pemasukan Bulan Ini</Txt>
-          <Txt style={s.kValue} numberOfLines={1} adjustsFontSizeToFit>Rp 41,75 jt</Txt>
-          <Txt style={[s.kLabel, { color: C.ok }]}>▲ 8% dari bulan lalu</Txt>
+          <Txt style={s.kValue} numberOfLines={1} adjustsFontSizeToFit>{juta(kpi.masuk)}</Txt>
+          <Txt style={[s.kLabel, { color: selisih !== null && selisih < 0 ? C.er : C.ok }]}>{selisih === null ? 'Belum ada data bulan lalu' : `${selisih >= 0 ? '▲' : '▼'} ${Math.abs(selisih)}% dari bulan lalu`}</Txt>
         </Kpi>
 
         <Kpi width={kpiW} accent={['#DC2626', '#FB923C']}>
           <Txt style={s.kLabel}>Tagihan Menunggak</Txt>
-          <Txt style={[s.kValue, { color: C.er }]}>3</Txt>
-          <Txt style={s.kLabel}>Total Rp 3.600.000</Txt>
+          <Txt style={[s.kValue, { color: C.er }]}>{kpi.tunggak}</Txt>
+          <Txt style={s.kLabel}>Total {rupiah(kpi.nilaiTunggak)}</Txt>
         </Kpi>
 
         <Kpi width={kpiW} accent={['#B45309', '#FBBF24']}>
           <Txt style={s.kLabel}>Keluhan Aktif</Txt>
-          <Txt style={s.kValue}>{KELUHAN_AKTIF}</Txt>
+          <Txt style={s.kValue}>{kpi.keluhan}</Txt>
           <Pressable onPress={() => navigation.navigate('Keluhan')} hitSlop={6}>
             <Txt style={[s.kLabel, { color: C.acc }]}>Lihat papan keluhan →</Txt>
           </Pressable>
@@ -144,14 +179,14 @@ export default function AdminDashboardScreen({ navigation }: Props) {
       </View>
 
       <CardHead>
-        <Txt style={{ fontSize: 16, fontWeight: '700', marginBottom: 2 }}>Jatuh Tempo Terdekat</Txt>
+        <Txt style={{ fontSize: 16, fontWeight: '700', marginBottom: 2 }}>Status Tagihan Bulan Ini</Txt>
       </CardHead>
     </View>
   );
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <FlatList
         data={DUE}
         keyExtractor={(i) => i.id}
@@ -163,7 +198,7 @@ export default function AdminDashboardScreen({ navigation }: Props) {
             <View style={s.dueRow}>
               <View style={{ flex: 1 }}>
                 <Txt style={{ fontWeight: '600' }}>{item.nama}</Txt>
-                <Txt style={s.sub}>Kamar {item.kamar} · Jatuh tempo {item.tempo}</Txt>
+                <Txt style={s.sub}>Kamar {item.kamar} · {item.tempo}</Txt>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 4 }}>
                 <Txt style={{ fontWeight: '700', fontSize: 13 }}>{item.nominal}</Txt>

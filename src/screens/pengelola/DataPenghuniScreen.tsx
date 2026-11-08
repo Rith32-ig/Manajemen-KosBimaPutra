@@ -1,5 +1,5 @@
 /* === ANGGOTA 3: DAWWAS (PENGELOLA) — SCREEN 6: DATA PENGHUNI ===
-   File mandiri: UI + komponen kecil + data dummy ada di file ini. */
+   Data dari Supabase: tabel penghuni. */
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { ComponentProps, ReactElement, ReactNode } from 'react';
 import {
@@ -10,6 +10,7 @@ import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase, tglPanjang, isPemilik } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -29,15 +30,6 @@ const G_START = { x: 0, y: 0 };
 const G_END = { x: 1, y: 1 };
 const SHADOW_CARD = { shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
 const SHADOW_BTN = { shadowColor: '#2563EB', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
-
-/* ============ DATA DUMMY ============ */
-const RESIDENTS: Penghuni[] = [
-  { id: 'r1', nama: 'Andi Pratama', kamar: 'A-03', tipe: 'Bulanan', hp: '0812-1111-2201', masuk: '12 Jan 2026' },
-  { id: 'r2', nama: 'Siti Nurhaliza', kamar: 'B-07', tipe: 'Bulanan', hp: '0813-2222-3302', masuk: '03 Mar 2025' },
-  { id: 'r3', nama: 'Budi Santoso', kamar: 'A-11', tipe: 'Bulanan', hp: '0857-3333-4403', masuk: '20 Agu 2026' },
-  { id: 'r4', nama: 'Dewi Lestari', kamar: 'C-02', tipe: 'Harian', hp: '0821-4444-5504', masuk: '16 Okt 2026' },
-  { id: 'r5', nama: 'Rizky Fadilah', kamar: 'B-02', tipe: 'Bulanan', hp: '0878-5555-6605', masuk: '01 Jul 2024' },
-];
 
 const SEMUA = 'Semua tipe sewa';
 const TIPE_SEWA = ['Bulanan', 'Harian'] as const;
@@ -211,7 +203,22 @@ function useToast(): [(pesan: string) => void, ReactElement] {
 /* ============ SCREEN 6: DATA PENGHUNI ============ */
 export default function DataPenghuniScreen() {
   const [toast, toastNode] = useToast();
-  const [residents, setResidents] = useState(RESIDENTS);
+  const [residents, setResidents] = useState<Penghuni[]>([]);
+  const readOnly = isPemilik();
+
+  const muat = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('penghuni')
+      .select('id,nama,nomor_kamar,tipe_sewa,nomor_hp,tanggal_masuk')
+      .eq('status_penghuni', 'Aktif')
+      .order('nomor_kamar');
+    if (error) { toast('Gagal memuat data: ' + error.message); return; }
+    setResidents((data ?? []).map((r) => ({
+      id: r.id, nama: r.nama, kamar: r.nomor_kamar, tipe: r.tipe_sewa as TipeSewa,
+      hp: r.nomor_hp || '-', masuk: tglPanjang(r.tanggal_masuk),
+    })));
+  }, [toast]);
+  useEffect(() => { muat(); }, [muat]);
 
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>(SEMUA);
@@ -223,6 +230,7 @@ export default function DataPenghuniScreen() {
   const [tipe, setTipe] = useState<TipeSewa>('Bulanan');
   const [hp, setHp] = useState('');
   const [masuk, setMasuk] = useState('');
+  const [pass, setPass] = useState('');
   const [kirimWa, setKirimWa] = useState(true);
   const [errNama, setErrNama] = useState<string | null>(null);
 
@@ -233,32 +241,55 @@ export default function DataPenghuniScreen() {
   });
 
   const bukaModal = () => {
-    setNama(''); setKamar(''); setTipe('Bulanan'); setHp(''); setMasuk(''); setKirimWa(true); setErrNama(null);
+    setNama(''); setKamar(''); setTipe('Bulanan'); setHp(''); setMasuk(''); setPass(''); setKirimWa(true); setErrNama(null);
     setOpen(true);
   };
 
-  const simpan = () => {
-    if (!nama.trim()) {
-      setErrNama('Nama wajib diisi');
+  const simpan = async () => {
+    if (!nama.trim()) { setErrNama('Nama wajib diisi'); return; }
+    if (!kamar.trim()) { setErrNama('Nomor kamar wajib diisi'); return; }
+    if (!hp.trim()) { setErrNama('Nomor HP wajib diisi (untuk login)'); return; }
+    if (pass.length < 8) { setErrNama('Password awal minimal 8 karakter'); return; }
+    const iso = /^\d{4}-\d{2}-\d{2}$/.test(masuk.trim()) ? masuk.trim() : new Date().toISOString().slice(0, 10);
+    const { data: baru, error } = await supabase.from('penghuni').insert({
+      nama: nama.trim(), nomor_kamar: kamar.trim(), tipe_sewa: tipe,
+      nomor_hp: hp.trim(), tanggal_masuk: iso, metode_pembayaran: 'TF',
+    }).select('id').single();
+    if (error) {
+      setErrNama(error.message.includes('foreign key') ? 'Nomor kamar tidak ditemukan'
+        : error.message.includes('uq_penghuni_kamar_aktif') ? 'Kamar sudah terisi penghuni aktif' : error.message);
       return;
     }
-    setResidents((list) => [
-      {
-        id: 'r' + Date.now(),
-        nama: nama.trim(),
-        kamar: kamar.trim() || '-',
-        tipe,
-        hp: hp.trim() || '-',
-        masuk: masuk.trim() || 'Hari ini',
-      },
-      ...list,
-    ]);
     setOpen(false);
-    toast('Penghuni ditambahkan ✓');
+    const ak = await kelolaAkun('set_password', baru!.id, pass);
+    toast(ak ? 'Penghuni & akun login dibuat ✓' : 'Penghuni tersimpan, tetapi akun gagal dibuat. Gunakan "Atur Password".');
+    muat();
+  };
+
+  // Edge Function kelola-akun (service role hanya di server)
+  const kelolaAkun = async (action: 'set_password' | 'keluar', id: string, password?: string) => {
+    const { data, error } = await supabase.functions.invoke('kelola-akun', { body: { action, penghuni_id: id, password } });
+    if (error || data?.error) {
+      let pesan = data?.error || error?.message || 'gagal';
+      try { const j = await (error as any)?.context?.json?.(); if (j?.error) pesan = j.error; } catch {}
+      toast(pesan);
+      return false;
+    }
+    return true;
+  };
+
+  const [aksiId, setAksiId] = useState<string | null>(null);
+  const [aksiMode, setAksiMode] = useState<'password' | 'keluar'>('password');
+  const [passBaru, setPassBaru] = useState('');
+  const jalankanAksi = async () => {
+    if (!aksiId) return;
+    if (aksiMode === 'password' && passBaru.length < 8) { toast('Password minimal 8 karakter'); return; }
+    const ok = await kelolaAkun(aksiMode === 'password' ? 'set_password' : 'keluar', aksiId, passBaru);
+    if (ok) { toast(aksiMode === 'password' ? 'Password diatur ✓' : 'Penghuni ditandai keluar & akun diblokir ✓'); setAksiId(null); setPassBaru(''); muat(); }
   };
 
   const bukaWa = (nomor: string) => {
-    const digits = nomor.replace(/\D/g, '').replace(/^0/, '62');
+    const digits = nomor.split('/')[0].replace(/\D/g, '').replace(/^0/, '62');
     if (!digits) return;
     Linking.openURL(`https://wa.me/${digits}`).catch(() => toast('WhatsApp tidak dapat dibuka'));
   };
@@ -277,7 +308,7 @@ export default function DataPenghuniScreen() {
 
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="dark-content" backgroundColor={C.bg} />
+      <StatusBar barStyle="dark-content" />
       <FlatList
         data={data}
         keyExtractor={(i) => i.id}
@@ -317,16 +348,33 @@ export default function DataPenghuniScreen() {
               <Txt style={s.lbl}>Tgl Masuk</Txt>
               <Txt style={s.val}>{item.masuk}</Txt>
             </View>
+            {readOnly ? null : (
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                <CustomButton title="Atur Password" ghost onPress={() => { setAksiMode('password'); setPassBaru(''); setAksiId(item.id); }} />
+                <CustomButton title="Penghuni Keluar" ghost onPress={() => { setAksiMode('keluar'); setAksiId(item.id); }} />
+              </View>
+            )}
           </CustomCard>
         )}
       />
 
-      {/* FAB tambah penghuni */}
-      <Pressable onPress={bukaModal} style={s.fab} accessibilityLabel="Tambah penghuni">
+      {/* FAB tambah penghuni (hanya Pengelola) */}
+      {readOnly ? null : <Pressable onPress={bukaModal} style={s.fab} accessibilityLabel="Tambah penghuni">
         <LinearGradient colors={GRAD_PRIMARY} start={G_START} end={G_END} style={s.fabIn}>
           <Ionicons name="add" size={30} color="#fff" />
         </LinearGradient>
-      </Pressable>
+      </Pressable>}
+
+      {/* pop-up Atur Password / Penghuni Keluar */}
+      <Popup visible={!!aksiId} onClose={() => setAksiId(null)}>
+        <Txt style={{ fontSize: 16, fontWeight: '700' }}>{aksiMode === 'password' ? 'Atur Password Penghuni' : 'Penghuni Keluar'}</Txt>
+        {aksiMode === 'password' ? (
+          <CustomInput label="Password baru (min. 8 karakter)" value={passBaru} onChangeText={setPassBaru} secureTextEntry autoCapitalize="none" />
+        ) : (
+          <Txt style={{ marginTop: 10, color: C.mut }}>Status penghuni menjadi Keluar dan akunnya diblokir. Data riwayat tidak dihapus.</Txt>
+        )}
+        <View style={{ marginTop: 16 }}><CustomButton title="Konfirmasi" onPress={jalankanAksi} /></View>
+      </Popup>
 
       {/* pop-up Tambah Penghuni Baru */}
       <Popup visible={open} onClose={() => setOpen(false)}>
@@ -342,7 +390,8 @@ export default function DataPenghuniScreen() {
         <CustomInput label="No. Kamar" placeholder="A-12" value={kamar} onChangeText={setKamar} autoCapitalize="characters" />
         <Select label="Tipe sewa" value={tipe} options={TIPE_SEWA} onChange={setTipe} />
         <CustomInput label="No. HP" placeholder="08xxxxxxxxxx" value={hp} onChangeText={setHp} keyboardType="phone-pad" />
-        <CustomInput label="Tanggal masuk" placeholder="Contoh: 18 Okt 2026" value={masuk} onChangeText={setMasuk} />
+        <CustomInput label="Password awal (min. 8 karakter)" value={pass} onChangeText={setPass} secureTextEntry autoCapitalize="none" />
+        <CustomInput label="Tanggal masuk" placeholder="YYYY-MM-DD (kosong = hari ini)" value={masuk} onChangeText={setMasuk} />
         <Toggle value={kirimWa} onChange={setKirimWa} label="Kirim info aturan kos via WhatsApp" />
         <View style={s.actions}>
           <CustomButton title="Batal" ghost onPress={() => setOpen(false)} />

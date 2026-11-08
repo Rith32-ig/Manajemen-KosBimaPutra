@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import type { ComponentProps } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -15,6 +16,7 @@ import AdminDashboardScreen from './pengelola/AdminDashboardScreen';
 import DataPenghuniScreen from './pengelola/DataPenghuniScreen';
 import PembayaranScreen from './pengelola/PembayaranScreen';
 import KeluhanAdminScreen from './pengelola/KeluhanAdminScreen';
+import { ambilProfil, keluar, supabase, TARGET } from '../lib/supabase';
 
 /* ============ TIPE NAVIGASI (dipakai semua layar lewat `import type`) ============ */
 export type PenghuniTabParamList = {
@@ -35,6 +37,7 @@ export type RootStackParamList = {
   Landing: undefined;
   Login: undefined;
   AdminTabs: NavigatorScreenParams<AdminTabParamList> | undefined;
+  PemilikTabs: NavigatorScreenParams<AdminTabParamList> | undefined;
   PenghuniTabs: NavigatorScreenParams<PenghuniTabParamList> | undefined;
 };
 
@@ -82,7 +85,7 @@ function PenghuniTabs() {
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault(); // bukan layar, hanya aksi logout
-            navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Landing' }] });
+            keluar().finally(() => navigation.getParent()?.reset({ index: 0, routes: [{ name: 'Landing' }] }));
           },
         })}
       />
@@ -103,11 +106,34 @@ function AdminTabs() {
 }
 
 export default function RootNavigator() {
+  // pulihkan sesi tersimpan; arahkan sesuai role dari database
+  const [awal, setAwal] = useState<keyof RootStackParamList | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const profil = data.session ? await ambilProfil() : null;
+        setAwal(profil ? TARGET[profil.role] : 'Landing');
+      } catch {
+        setAwal('Landing');
+      }
+    })();
+  }, []);
+
+  if (!awal) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator color={ACC} />
+      </View>
+    );
+  }
+
   return (
-    <Stack.Navigator initialRouteName="Landing" screenOptions={{ headerShown: false, animation: 'none' }}>
+    <Stack.Navigator initialRouteName={awal} screenOptions={{ headerShown: false, animation: 'none' }}>
       <Stack.Screen name="Landing" component={LandingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="AdminTabs" component={AdminTabs} />
+      <Stack.Screen name="PemilikTabs" component={AdminTabs} />
       <Stack.Screen name="PenghuniTabs" component={PenghuniTabs} />
     </Stack.Navigator>
   );
