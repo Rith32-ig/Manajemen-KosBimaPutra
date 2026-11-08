@@ -1,15 +1,19 @@
 /* === ANGGOTA 4: HANIFA (PENGELOLA) — SCREEN 7: PEMBAYARAN & KUITANSI ===
    Data dari Supabase: tabel penghuni & pembayaran. */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
-import {
-  View, Text, TextInput, Pressable, SectionList, Share, Animated, KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, isPemilik } from '../../lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  Animated, KeyboardAvoidingView, Platform,
+  Pressable, SectionList, Share,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { isPemilik, supabase } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
