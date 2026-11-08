@@ -9,6 +9,7 @@ import type { TextProps, TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase, tglPendek, isPemilik } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { AdminTabParamList } from '../RootNavigator';
 
@@ -36,20 +37,7 @@ const SHADOW_BTN = { shadowColor: '#2563EB', shadowOpacity: 0.3, shadowRadius: 6
 /* ============ DATA DUMMY ============ */
 // prio: h = Urgent, m = Sedang, l = Rendah | kol = indeks kolom pada TICKET_COLS
 const TICKET_COLS = ['Masuk', 'Ditangani Mandiri', 'Perlu Teknisi', 'Selesai'];
-const TICKETS: Tiket[] = [
-  { id: 't1', judul: 'Wi-Fi lantai 2 lambat', info: 'B-05 · 17 Okt', prio: 'm', kol: 0 },
-  { id: 't2', judul: 'Keran bocor', info: 'A-08 · 17 Okt', prio: 'h', kol: 0 },
-  { id: 't3', judul: 'Lampu koridor mati', info: 'Koridor A · 16 Okt', prio: 'l', kol: 1 },
-  { id: 't4', judul: 'Air mati', info: 'C-04 · 15 Okt', prio: 'h', kol: 2 },
-  { id: 't5', judul: 'Atap bocor saat hujan', info: 'B-12 · 12 Okt', prio: 'h', kol: 2 },
-  { id: 't6', judul: 'Kunci kamar macet', info: 'A-01 · 10 Okt', prio: 'l', kol: 3 },
-];
-
-const NOTES: Catatan[] = [
-  { id: 'n1', teks: 'Telepon tukang ledeng untuk keran A-08', done: false },
-  { id: 'n2', teks: 'Cek listrik koridor hari Senin', done: false },
-  { id: 'n3', teks: 'Follow up atap bocor B-12 (sudah 6 hari!)', done: false },
-];
+const PRIO_DB: Record<string, Prio> = { Urgent: 'h', Sedang: 'm', Rendah: 'l' };
 
 const COL_COLOR = [C.acc, '#8B5CF6', '#F59E0B', C.ok]; // garis atas tiap kolom
 const COL_TONE: Tone[] = ['ac', 'pu', 'wn', 'ok'];
@@ -151,26 +139,55 @@ function useToast(): [(pesan: string) => void, ReactElement] {
 /* ============ SCREEN 8: KELUHAN (KANBAN) ============ */
 export default function KeluhanAdminScreen({ navigation }: Props) {
   const [toast, toastNode] = useToast();
-  const [tickets, setTickets] = useState(TICKETS);
-  const [notes, setNotes] = useState(NOTES);
+  const [tickets, setTickets] = useState<Tiket[]>([]);
+  const [notes, setNotes] = useState<Catatan[]>([]);
+  const readOnly = isPemilik();
+
+  const muat = useCallback(async () => {
+    const [kl, ct] = await Promise.all([
+      supabase.from('keluhan').select('id,kategori,deskripsi,status_penanganan,prioritas,created_at,penghuni(nomor_kamar)').order('created_at', { ascending: false }),
+      supabase.from('catatan_pengelola').select('id,teks,selesai').order('created_at'),
+    ]);
+    if (kl.error || ct.error) { toast('Gagal memuat data: ' + (kl.error || ct.error)!.message); return; }
+    setTickets((kl.data ?? []).map((k: any) => ({
+      id: k.id, judul: `${k.kategori}: ${k.deskripsi.length > 45 ? k.deskripsi.slice(0, 45) + '…' : k.deskripsi}`,
+      info: `${k.penghuni?.nomor_kamar ?? '-'} · ${tglPendek(k.created_at)}`,
+      prio: PRIO_DB[k.prioritas] ?? 'm', kol: Math.max(0, TICKET_COLS.indexOf(k.status_penanganan)),
+    })));
+    setNotes((ct.data ?? []).map((n) => ({ id: n.id, teks: n.teks, done: n.selesai })));
+  }, [toast]);
+  useEffect(() => { muat(); }, [muat]);
   const [tab, setTab] = useState('Semua');
   const [nn, setNn] = useState('');
 
   // pindahkan tiket satu kolom ke kanan
-  const pindah = (id: string) => {
+  const pindah = async (id: string) => {
+    if (readOnly) { toast('Pemilik hanya dapat melihat data'); return; }
     const t = tickets.find((x) => x.id === id);
     if (!t || t.kol >= TICKET_COLS.length - 1) return;
+    const { error } = await supabase.from('keluhan').update({ status_penanganan: TICKET_COLS[t.kol + 1] }).eq('id', id);
+    if (error) { toast('Gagal memindahkan: ' + error.message); return; }
     setTickets((list) => list.map((x) => (x.id === id ? { ...x, kol: x.kol + 1 } : x)));
     toast('Tiket dipindahkan ke: ' + TICKET_COLS[t.kol + 1]);
   };
 
-  const toggleNote = (id: string) => setNotes((list) => list.map((n) => (n.id === id ? { ...n, done: !n.done } : n)));
+  const toggleNote = async (id: string) => {
+    if (readOnly) return;
+    const n = notes.find((x) => x.id === id);
+    if (!n) return;
+    const { error } = await supabase.from('catatan_pengelola').update({ selesai: !n.done }).eq('id', id);
+    if (error) { toast('Gagal memperbarui: ' + error.message); return; }
+    setNotes((list) => list.map((x) => (x.id === id ? { ...x, done: !x.done } : x)));
+  };
 
-  const tambahCatatan = () => {
+  const tambahCatatan = async () => {
     const v = nn.trim();
-    if (!v) return;
-    setNotes((list) => [...list, { id: 'n' + Date.now(), teks: v, done: false }]);
+    if (!v || readOnly) return;
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from('catatan_pengelola').insert({ teks: v, dibuat_oleh: u.user?.id });
+    if (error) { toast('Gagal menyimpan: ' + error.message); return; }
     setNn('');
+    muat();
   };
 
   // satu section per kolom kanban (tab "Semua" menampilkan keempat kolom)

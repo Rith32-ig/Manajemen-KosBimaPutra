@@ -1,20 +1,26 @@
 /* === ANGGOTA 4: HANIFA (PENGELOLA) — SCREEN 7: PEMBAYARAN & KUITANSI ===
-   File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
-import {
-  View, Text, TextInput, Pressable, SectionList, Share, Animated, KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
+   Data dari Supabase: tabel penghuni & pembayaran. */
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  Animated, KeyboardAvoidingView, Platform,
+  Pressable, SectionList, Share,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { isPemilik, supabase } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
 type Tone = 'ok' | 'wn' | 'er';
 type ButtonType = 'primary' | 'ghost' | 'wa';
 type Penghuni = { id: string; nama: string; kamar: string };
+type Rincian = { id: string; nama: string; metode: string; nilai: number; periode: string; bln: number; thn: number; status: string };
 type Transaksi = { id: string; nama: string; metode: string; nilai: number; periode: string; bln: number; thn: number };
 type Rekap = { id: string; nama: string; kamar: string; sudah: boolean; nilai: number };
 type Telat = { id: string; label: string; info: string };
@@ -36,15 +42,6 @@ const SHADOW_CARD = { shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius:
 const SHADOW_BTN = { shadowColor: '#2563EB', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
 
 /* ============ DATA DUMMY ============ */
-const RESIDENTS: Penghuni[] = [
-  { id: 'r1', nama: 'Andi Pratama', kamar: 'A-03' },
-  { id: 'r2', nama: 'Siti Nurhaliza', kamar: 'B-07' },
-  { id: 'r3', nama: 'Budi Santoso', kamar: 'A-11' },
-  { id: 'r4', nama: 'Dewi Lestari', kamar: 'C-02' },
-  { id: 'r5', nama: 'Rizky Fadilah', kamar: 'B-02' },
-  { id: 'r6', nama: 'Maya Putri', kamar: 'C-09' },
-];
-
 const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 // bulan & tahun diambil dari tanggal perangkat (Date), bukan ditulis tetap
 const SEKARANG = new Date();
@@ -55,28 +52,6 @@ const THN_LALU = BLN_INI === 0 ? THN_INI - 1 : THN_INI;
 // daftar tahun: dari tahun mulai pemakaian sampai tahun sekarang (bertambah sendiri tiap tahun)
 const TAHUN_MULAI = 2025;
 const TAHUN = Array.from({ length: Math.max(1, THN_INI - TAHUN_MULAI + 1) }, (_, i) => String(TAHUN_MULAI + i));
-
-// bln = indeks bulan (0-11), thn = tahun; dipakai untuk rekap sudah/belum bayar
-const trx = (id: string, nama: string, metode: string, nilai: number, bln: number, thn: number): Transaksi => ({
-  id, nama, metode, nilai, bln, thn, periode: `${BULAN[bln]} ${thn}`,
-});
-
-const PAYMENTS: Transaksi[] = [
-  trx('p1', 'Andi Pratama', 'Transfer', 1200000, BLN_INI, THN_INI),
-  trx('p2', 'Siti Nurhaliza', 'Transfer', 1200000, BLN_INI, THN_INI),
-  trx('p3', 'Dewi Lestari', 'Cash', 350000, BLN_INI, THN_INI),
-  trx('p4', 'Andi Pratama', 'Transfer', 1200000, BLN_LALU, THN_LALU),
-  trx('p5', 'Siti Nurhaliza', 'Transfer', 1200000, BLN_LALU, THN_LALU),
-  trx('p6', 'Budi Santoso', 'Cash', 1200000, BLN_LALU, THN_LALU),
-  trx('p7', 'Dewi Lestari', 'Cash', 350000, BLN_LALU, THN_LALU),
-  trx('p8', 'Rizky Fadilah', 'Transfer', 1200000, BLN_LALU, THN_LALU),
-];
-
-const LATE: Telat[] = [
-  { id: 'l1', label: 'Budi Santoso · A-11', info: 'Terlambat 5 hari' },
-  { id: 'l2', label: 'Rizky Fadilah · B-02', info: 'Terlambat 12 hari' },
-  { id: 'l3', label: 'Maya Putri · C-09', info: 'Terlambat 3 hari' },
-];
 
 /* ============ FUNGSI BANTU ============ */
 // 1200000 -> "Rp 1.200.000" (tanpa Intl, aman di Hermes Android)
@@ -323,10 +298,33 @@ function Kuitansi({ d }: { d: DataKuitansi }) {
 /* ============ SCREEN 7: PEMBAYARAN ============ */
 export default function PembayaranScreen() {
   const [toast, toastNode] = useToast();
-  const [payments, setPayments] = useState(PAYMENTS);
+  const [payments, setPayments] = useState<Transaksi[]>([]);
+  const [RESIDENTS, setResidents] = useState<Penghuni[]>([]);
+  const [harga, setHarga] = useState<Record<string, number>>({});
+  const readOnly = isPemilik();
 
-  const options = RESIDENTS.map((r) => `${r.nama} · ${r.kamar}`);
-  const [penghuni, setPenghuni] = useState(options[0]);
+  const muat = useCallback(async () => {
+    const [pg, pb, km] = await Promise.all([
+      supabase.from('penghuni').select('id,nama,nomor_kamar').eq('status_penghuni', 'Aktif').order('nomor_kamar'),
+      supabase.from('pembayaran')
+        .select('id,jumlah_bayar,bulan_tagihan,tahun_tagihan,metode_pembayaran,status_pembayaran,created_at,penghuni(nama)')
+        .eq('status_pembayaran', 'Lunas').order('created_at', { ascending: false }),
+      supabase.from('kamar').select('nomor_kamar,harga_sewa'),
+    ]);
+    const err = pg.error || pb.error || km.error;
+    if (err) { toast('Gagal memuat data: ' + err.message); return; }
+    setResidents((pg.data ?? []).map((r) => ({ id: r.id, nama: r.nama, kamar: r.nomor_kamar })));
+    setHarga(Object.fromEntries((km.data ?? []).map((k) => [k.nomor_kamar, Number(k.harga_sewa)])));
+    setPayments((pb.data ?? []).map((p: any) => ({
+      id: p.id, nama: p.penghuni?.nama ?? '-', metode: p.metode_pembayaran, nilai: Number(p.jumlah_bayar),
+      bln: p.bulan_tagihan - 1, thn: p.tahun_tagihan, periode: `${BULAN[p.bulan_tagihan - 1]} ${p.tahun_tagihan}`,
+    })));
+  }, [toast]);
+  useEffect(() => { muat(); }, [muat]);
+
+  const options = RESIDENTS.length ? RESIDENTS.map((r) => `${r.nama} · ${r.kamar}`) : ['(belum ada penghuni)'];
+  const [penghuni, setPenghuni] = useState('');
+  const penghuniAktif = options.includes(penghuni) ? penghuni : options[0];
   const [tipe, setTipe] = useState('Bulanan');
   const [metode, setMetode] = useState('Transfer');
   const [bln, setBln] = useState(BULAN[BLN_INI]);
@@ -340,7 +338,8 @@ export default function PembayaranScreen() {
   const [errNominal, setErrNominal] = useState<string | null>(null);
   const [saved, setSaved] = useState<KuitansiTersimpan | null>(null); // snapshot kuitansi yang sudah disimpan
 
-  const [nm, rm] = penghuni.split(' · ');
+  const [nm, rm] = penghuniAktif.split(' · ');
+  useEffect(() => { if (harga[rm]) setNominal(String(harga[rm])); }, [rm, harga]);
 
   // rekap: penghuni dianggap "sudah bayar" bila ada transaksi pada bulan & tahun yang difilter
   const fb = BULAN.indexOf(fBln);
@@ -364,21 +363,23 @@ export default function PembayaranScreen() {
   const sameAsSaved = !!saved && saved.nm === nm && saved.kp === kp && saved.km === metode && saved.kt === kt;
   const kw: DataKuitansi = { nm, rm, kp, km: metode, kt, tgl: tanggalPanjang(), kno: sameAsSaved && saved ? saved.kno : nextNo };
 
-  const simpan = () => {
-    if (!(Number(nominal) > 0)) {
-      setErrNominal('Nominal wajib diisi');
-      return;
-    }
+  const simpan = async () => {
+    if (readOnly) { toast('Pemilik hanya dapat melihat data'); return; }
+    if (!(Number(nominal) > 0)) { setErrNominal('Nominal wajib diisi'); return; }
+    const pn = RESIDENTS.find((r) => `${r.nama} · ${r.kamar}` === penghuniAktif);
+    if (!pn) { setErrNominal('Pilih penghuni terlebih dahulu'); return; }
     setErrNominal(null);
-    setPayments((list) => [
-      { id: 'p' + Date.now(), nama: nm, metode, nilai: Number(nominal), periode, bln: BULAN.indexOf(bln), thn: Number(thn) },
-      ...list,
-    ]);
-    // rekap langsung menampilkan periode yang baru dicatat
+    const { error } = await supabase.from('pembayaran').insert({
+      penghuni_id: pn.id, jumlah_bayar: Number(nominal), tanggal_bayar: new Date().toISOString().slice(0, 10),
+      bulan_tagihan: BULAN.indexOf(bln) + 1, tahun_tagihan: Number(thn),
+      metode_pembayaran: metode, status_pembayaran: 'Lunas',
+    });
+    if (error) { toast('Gagal menyimpan: ' + error.message); return; }
     setFBln(bln);
     setFThn(thn);
     setSaved({ nm, kp, km: metode, kt, kno: nextNo });
     toast('Pembayaran tersimpan ✓');
+    muat();
   };
 
   const bagikan = async () => {
@@ -398,7 +399,7 @@ export default function PembayaranScreen() {
       {/* form pencatatan transaksi */}
       <Txt style={s.h1}>Catat Pembayaran</Txt>
       <CustomCard style={{ marginTop: 12 }}>
-        <Select label="Penghuni" value={penghuni} options={options} onChange={setPenghuni} style={{ marginTop: 0 }} />
+        <Select label="Penghuni" value={penghuniAktif} options={options} onChange={setPenghuni} style={{ marginTop: 0 }} />
         <FieldLabel>Tipe sewa</FieldLabel>
         <SegmentedControl options={['Bulanan', 'Harian']} value={tipe} onChange={setTipe} />
         <FieldLabel>Metode</FieldLabel>
@@ -414,7 +415,7 @@ export default function PembayaranScreen() {
           keyboardType="numeric"
           error={errNominal}
         />
-        <CustomButton title="Simpan & Buat Kuitansi" icon="receipt" block style={{ marginTop: 20 }} onPress={simpan} />
+        {readOnly ? null : <CustomButton title="Simpan & Buat Kuitansi" icon="receipt" block style={{ marginTop: 20 }} onPress={simpan} />}
       </CustomCard>
 
       {/* preview kuitansi digital */}
@@ -468,6 +469,14 @@ export default function PembayaranScreen() {
     </View>
   );
 
+  // belum bayar bulan berjalan; hari terlambat dihitung dari tanggal 1 bulan tsb
+  const LATE: Telat[] = useMemo(() => {
+    const sudah = new Set(payments.filter((p) => p.bln === BLN_INI && p.thn === THN_INI).map((p) => p.nama));
+    const hari = SEKARANG.getDate();
+    return RESIDENTS.filter((r) => !sudah.has(r.nama) && hari > 1).map((r) => ({
+      id: r.id, label: `${r.nama} · ${r.kamar}`, info: `Belum bayar ${BULAN[BLN_INI]} · ${hari - 1} hari sejak tanggal 1`,
+    }));
+  }, [payments, RESIDENTS]);
   const sections: Seksi[] = [
     { key: 'riwayat', title: 'Riwayat Transaksi', data: payments },
     { key: 'late', title: 'Terlambat Bayar', data: LATE },

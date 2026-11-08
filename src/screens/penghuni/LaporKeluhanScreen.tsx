@@ -10,6 +10,7 @@ import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase, tglPendek } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { PenghuniTabParamList } from '../RootNavigator';
 import type { Keluhan } from './PenghuniHomeScreen';
@@ -108,20 +109,26 @@ export default function LaporKeluhanScreen({ navigation }: Props) {
   const [foto, setFoto] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
-  const kirim = () => {
+  const [kirimLoading, setKirimLoading] = useState(false);
+  const kirim = async () => {
     const teks = deskripsi.trim();
     if (!teks) {
       setErr('Deskripsi masalah wajib diisi');
       return;
     }
+    if (kirimLoading) return;
+    setKirimLoading(true);
+    // penghuni_id diambil dari akun yang login (RLS memastikan hanya milik sendiri)
+    const { data: me } = await supabase.from('penghuni').select('id').eq('status_penghuni', 'Aktif').maybeSingle();
+    if (!me) { setKirimLoading(false); setErr('Data penghuni untuk akun ini tidak ditemukan'); return; }
+    const { data, error } = await supabase.from('keluhan')
+      .insert({ penghuni_id: me.id, kategori: kategori, deskripsi: teks, status_penanganan: 'Masuk', prioritas: 'Sedang' })
+      .select('id,created_at').single();
+    setKirimLoading(false);
+    if (error || !data) { setErr('Gagal mengirim keluhan: ' + (error?.message ?? '')); return; }
     const ringkas = teks.length > 40 ? teks.slice(0, 40).trim() + '…' : teks;
     const keluhanBaru: Keluhan = {
-      id: 'c' + Date.now(),
-      judul: `${kategori}: ${ringkas}`,
-      tanggal: 'Dilaporkan hari ini',
-      status: 'Masuk',
-      tone: 'ac',
-      step: 1,
+      id: data.id, judul: `${kategori}: ${ringkas}`, tanggal: `Dilaporkan ${tglPendek(data.created_at)}`, status: 'Masuk', tone: 'ac', step: 1,
     };
     setDeskripsi('');
     setFoto(null);

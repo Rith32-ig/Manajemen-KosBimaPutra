@@ -1,6 +1,5 @@
-/* === ANGGOTA 1: FARID — SCREEN 2: HALAMAN LOGIN ===
-   File mandiri: UI + komponen kecil + data dummy ada di file ini.
-   Akun dummy -> Pengelola: pengelola / pengelola123 | Penghuni: penghuni / penghuni123 */
+/* === SCREEN 2: LOGIN NOMOR HP + PASSWORD (Supabase Auth) ===
+   Role (Pemilik / Pengelola / Penghuni) dibaca dari tabel profiles, bukan dari input pengguna. */
 import React, { useState } from 'react';
 import {
   View, Text, Image, TextInput, ScrollView, Pressable, StatusBar, StyleSheet,
@@ -11,11 +10,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './RootNavigator';
+import { supabase, keE164, ambilProfil, TARGET } from '../lib/supabase';
 
 /* ============ TIPE ============ */
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
-type Peran = 'Pengelola' | 'Penghuni';
-type Akun = { username: string; password: string; peran: Peran };
 type InputProps = Omit<TextInputProps, 'style'> & {
   label?: string;
   error?: string | boolean | null;
@@ -32,18 +30,6 @@ const FAMILY: Record<string, string> = { normal: F.regular, 400: F.regular, 500:
 const GRAD_PRIMARY = ['#1E293B', '#2563EB'] as const;
 const G_START = { x: 0, y: 0 };
 const G_END = { x: 1, y: 1 };
-
-/* ============ DATA DUMMY ============ */
-// satu form login untuk semua peran: peran ditentukan dari akun yang cocok
-const ACCOUNTS: Akun[] = [
-  { username: 'pengelola', password: 'pengelola123', peran: 'Pengelola' },
-  { username: 'penghuni', password: 'penghuni123', peran: 'Penghuni' },
-];
-
-const TARGET: Record<Peran, 'AdminTabs' | 'PenghuniTabs'> = {
-  Pengelola: 'AdminTabs',
-  Penghuni: 'PenghuniTabs',
-};
 
 const BG: ImageSourcePropType = require('../../assets/img/depan.jpg');
 
@@ -104,28 +90,50 @@ function Toggle({ value, onChange, label }: { value: boolean; onChange: (v: bool
 }
 
 /* ============ SCREEN ============ */
+function pesanError(msg: string, status?: number): string {
+  const m = (msg || '').toLowerCase();
+  if (m.includes('invalid login') || m.includes('invalid credentials')) return 'Nomor HP atau password salah.';
+  if (m.includes('banned')) return 'Akun sudah tidak aktif. Hubungi pengelola kos.';
+  if (m.includes('rate') || m.includes('too many') || status === 429) return 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.';
+  if (m.includes('network') || m.includes('fetch')) return 'Tidak ada koneksi internet.';
+  return 'Terjadi kesalahan: ' + msg;
+}
+
 export default function LoginScreen({ navigation }: Props) {
-  const [username, setUsername] = useState('');
+  const [hp, setHp] = useState('+62');
   const [password, setPassword] = useState('');
-  const [remember, setRemember] = useState(true);
-  const [errUser, setErrUser] = useState<string | null>(null);
+  const [errHp, setErrHp] = useState<string | null>(null);
   const [errPass, setErrPass] = useState<string | null>(null);
   const [errAll, setErrAll] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const doLogin = () => {
-    const u = username.trim().toLowerCase();
+  const doLogin = async () => {
+    if (loading) return;
+    const nomor = keE164(hp);
     setErrAll('');
-    setErrUser(u ? null : 'Username wajib diisi');
-    setErrPass(password ? null : 'Kata sandi wajib diisi');
-    if (!u || !password) return;
-
-    const akun = ACCOUNTS.find((a) => a.username === u && a.password === password);
-    if (!akun) {
-      setErrAll('Username atau kata sandi salah');
+    setErrHp(nomor ? null : 'Masukkan nomor HP valid dengan format +62…');
+    setErrPass(password ? null : 'Password wajib diisi');
+    if (!nomor || !password) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithPassword({ phone: nomor, password });
+    if (error) { setLoading(false); setErrAll(pesanError(error.message, error.status)); return; }
+    const profil = await ambilProfil(); // role dari database
+    if (!profil) {
+      await supabase.auth.signOut(); setLoading(false);
+      setErrAll('Profil tidak ditemukan. Hubungi pengelola kos.');
       return;
     }
-    // masuk ke area sesuai peran akun; reset supaya tombol back tidak kembali ke login
-    navigation.reset({ index: 0, routes: [{ name: TARGET[akun.peran] }] });
+    if (profil.role === 'penghuni') {
+      // penghuni yang sudah keluar tidak boleh masuk
+      const { data: aktif } = await supabase.from('penghuni').select('id').eq('status_penghuni', 'Aktif').maybeSingle();
+      if (!aktif) {
+        await supabase.auth.signOut(); setLoading(false);
+        setErrAll('Akun sudah tidak aktif. Hubungi pengelola kos.');
+        return;
+      }
+    }
+    setLoading(false);
+    navigation.reset({ index: 0, routes: [{ name: TARGET[profil.role] }] });
   };
 
   return (
@@ -144,31 +152,32 @@ export default function LoginScreen({ navigation }: Props) {
           <View style={s.side}>
             <Ionicons name="home" size={40} color="#fff" />
             <Txt style={s.sideH}>Kos Bima Putra</Txt>
-            <Txt style={s.sideP}>Kelola data, pembayaran, dan keluhan kos dalam satu aplikasi. Sistem mengenali peran Anda dari akun yang digunakan.</Txt>
+            <Txt style={s.sideP}>Kelola data, pembayaran, dan keluhan kos dalam satu aplikasi. Sistem mengenali peran Anda dari nomor HP yang terdaftar.</Txt>
           </View>
 
           <View style={s.form}>
             <Txt style={s.h2}>Masuk</Txt>
-            <Txt style={s.sub}>Gunakan akun penghuni atau pengelola</Txt>
+            <Txt style={s.sub}>Gunakan nomor HP terdaftar dan password dari pengelola</Txt>
             <View style={{ marginTop: 14 }}>
               <View style={s.badgeRow}>
                 <Ionicons name="people" size={12} color={C.acc} />
-                <Txt style={s.badgeTxt}>Penghuni &amp; Pengelola</Txt>
+                <Txt style={s.badgeTxt}>Pemilik, Pengelola &amp; Penghuni</Txt>
               </View>
             </View>
 
             <CustomInput
-              label="Username"
-              placeholder="Masukkan username"
-              value={username}
-              onChangeText={(t) => { setUsername(t); setErrUser(null); setErrAll(''); }}
-              error={errUser || !!errAll}
-              autoComplete="username"
+              label="Nomor HP"
+              placeholder="+62 812-3456-7890"
+              value={hp}
+              onChangeText={(t) => { setHp(t); setErrHp(null); setErrAll(''); }}
+              error={errHp || !!errAll}
+              keyboardType="phone-pad"
+              autoComplete="tel"
               returnKeyType="next"
             />
             <CustomInput
-              label="Kata sandi"
-              placeholder="Masukkan kata sandi"
+              label="Password"
+              placeholder="Masukkan password"
               secureTextEntry
               value={password}
               onChangeText={(t) => { setPassword(t); setErrPass(null); setErrAll(''); }}
@@ -178,10 +187,8 @@ export default function LoginScreen({ navigation }: Props) {
               onSubmitEditing={doLogin}
             />
 
-            <Toggle value={remember} onChange={setRemember} label="Ingat saya" />
-
             <Txt style={s.lerr}>{errAll}</Txt>
-            <CustomButton title="Masuk" onPress={doLogin} />
+            <CustomButton title={loading ? 'Memproses…' : 'Masuk'} onPress={doLogin} />
 
             <Pressable onPress={() => navigation.navigate('Landing')} hitSlop={8}>
               <Txt style={s.skip}>← Kembali ke beranda</Txt>

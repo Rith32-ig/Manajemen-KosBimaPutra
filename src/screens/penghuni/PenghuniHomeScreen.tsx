@@ -8,6 +8,7 @@ import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase, rupiah, BULAN, tglPendek, tglPanjang } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { PenghuniTabParamList } from '../RootNavigator';
 
@@ -40,23 +41,26 @@ const SHADOW_CARD = { shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius:
 const SHADOW_BTN = { shadowColor: '#2563EB', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
 const SHADOW_REPORT = { shadowColor: '#EF4444', shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 6 };
 
-/* ============ DATA DUMMY ============ */
-const OWN_COMPLAINTS: Keluhan[] = [
-  { id: 'c1', judul: 'Wi-Fi lantai 2 lambat', tanggal: 'Dilaporkan 17 Okt', status: 'Ditangani', tone: 'wn', step: 2 },
-  { id: 'c2', judul: 'Lampu koridor mati', tanggal: 'Dilaporkan 10 Okt', status: 'Selesai', tone: 'ok', step: 4 },
-];
+/* ============ DATA (Supabase) ============ */
+const STATUS_KELUHAN: Record<string, { tone: Tone; step: number; label: string }> = {
+  'Masuk': { tone: 'ac', step: 1, label: 'Masuk' },
+  'Ditangani Mandiri': { tone: 'wn', step: 2, label: 'Ditangani' },
+  'Perlu Teknisi': { tone: 'wn', step: 3, label: 'Perlu Teknisi' },
+  'Selesai': { tone: 'ok', step: 4, label: 'Selesai' },
+};
+const TONE_PENGUMUMAN: Record<string, Tone> = { Penting: 'er', Info: 'wn', Rutin: 'ac' };
 
-const BILLS: Tagihan[] = [
-  { id: 'b1', bulan: 'Oktober 2026', ket: 'Rp 1.200.000', status: 'Lunas', tone: 'ok' },
-  { id: 'b2', bulan: 'September 2026', ket: 'Rp 1.200.000', status: 'Lunas', tone: 'ok' },
-  { id: 'b3', bulan: 'November 2026', ket: 'Jatuh tempo 5 Nov', status: 'Menunggu', tone: 'wn' },
-];
-
-const ANNOUNCEMENTS: Pengumuman[] = [
-  { id: 'a1', judul: 'Listrik padam sementara', ket: 'Senin 19 Okt, 09.00–12.00', label: 'Penting', tone: 'er' },
-  { id: 'a2', judul: 'Perawatan jaringan Wi-Fi', ket: 'Selasa 20 Okt malam, koneksi bisa terputus', label: 'Info', tone: 'wn' },
-  { id: 'a3', judul: 'Pemeriksaan kos mingguan', ket: 'Sabtu 24 Okt, pagi hari', label: 'Rutin', tone: 'ac' },
-];
+function usePengumuman(): Pengumuman[] {
+  const [list, setList] = useState<Pengumuman[]>([]);
+  useEffect(() => {
+    supabase.from('pengumuman').select('id,judul,isi_pengumuman,kategori,tanggal_pengumuman')
+      .order('tanggal_pengumuman', { ascending: false })
+      .then(({ data }) => setList((data ?? []).map((a) => ({
+        id: a.id, judul: a.judul, ket: a.isi_pengumuman, label: a.kategori, tone: TONE_PENGUMUMAN[a.kategori] ?? 'ac',
+      }))));
+  }, []);
+  return list;
+}
 
 const RULES = [
   'Gerbang dikunci pukul 22.00',
@@ -291,10 +295,11 @@ function IzinSheet({ onClose, toast }: SheetProps) {
 }
 
 function InfoSheet({ onClose }: Pick<SheetProps, 'onClose'>) {
+  const ANNOUNCEMENTS = usePengumuman();
   return (
     <View>
       <SheetTitle icon="megaphone" title="Pengumuman" onClose={onClose} />
-      <Txt style={s.sheetSub}>Dari pengelola kos · contoh data</Txt>
+      <Txt style={s.sheetSub}>Dari pengelola kos</Txt>
       <View style={{ marginTop: 6 }}>
         {ANNOUNCEMENTS.map((a, i) => (
           <View key={a.id} style={[s.li, i < ANNOUNCEMENTS.length - 1 && s.liSep]}>
@@ -357,7 +362,32 @@ const SHEETS: Record<SheetKey, ComponentType<SheetProps>> = { izin: IzinSheet, i
 /* ============ SCREEN 3: DASHBOARD PENGHUNI ============ */
 export default function PenghuniHomeScreen({ navigation, route }: Props) {
   const [toast, toastNode] = useToast();
-  const [ownComplaints, setOwnComplaints] = useState(OWN_COMPLAINTS);
+  const [ownComplaints, setOwnComplaints] = useState<Keluhan[]>([]);
+  const [BILLS, setBills] = useState<Tagihan[]>([]);
+  const [me, setMe] = useState<{ nama: string; kamar: string; masuk: string } | null>(null);
+  const [lunasIni, setLunasIni] = useState(false);
+
+  const muat = useCallback(async () => {
+    const [pg, kl, pb] = await Promise.all([
+      supabase.from('penghuni').select('nama,nomor_kamar,tanggal_masuk').eq('status_penghuni', 'Aktif').maybeSingle(),
+      supabase.from('keluhan').select('id,kategori,deskripsi,status_penanganan,created_at').order('created_at', { ascending: false }),
+      supabase.from('pembayaran').select('id,jumlah_bayar,bulan_tagihan,tahun_tagihan,status_pembayaran')
+        .order('tahun_tagihan', { ascending: false }).order('bulan_tagihan', { ascending: false }),
+    ]);
+    if (pg.data) setMe({ nama: pg.data.nama, kamar: pg.data.nomor_kamar, masuk: pg.data.tanggal_masuk });
+    setOwnComplaints((kl.data ?? []).map((k) => {
+      const st = STATUS_KELUHAN[k.status_penanganan] ?? STATUS_KELUHAN['Masuk'];
+      const ringkas = k.deskripsi.length > 40 ? k.deskripsi.slice(0, 40).trim() + '…' : k.deskripsi;
+      return { id: k.id, judul: `${k.kategori}: ${ringkas}`, tanggal: `Dilaporkan ${tglPendek(k.created_at)}`, status: st.label, tone: st.tone, step: st.step };
+    }));
+    const now = new Date();
+    setBills((pb.data ?? []).map((b) => ({
+      id: b.id, bulan: `${BULAN[b.bulan_tagihan - 1]} ${b.tahun_tagihan}`, ket: rupiah(b.jumlah_bayar), status: b.status_pembayaran,
+      tone: (b.status_pembayaran === 'Lunas' ? 'ok' : b.status_pembayaran === 'Ditolak' ? 'er' : 'wn') as Tone,
+    })));
+    setLunasIni((pb.data ?? []).some((b) => b.status_pembayaran === 'Lunas' && b.bulan_tagihan === now.getMonth() + 1 && b.tahun_tagihan === now.getFullYear()));
+  }, []);
+  useEffect(() => { muat(); }, [muat]);
   const [sheet, setSheet] = useState<SheetKey | null>(null);
   const Sheet = sheet ? SHEETS[sheet] : null;
 
@@ -365,35 +395,32 @@ export default function PenghuniHomeScreen({ navigation, route }: Props) {
   const keluhanBaru = route.params?.keluhanBaru;
   useEffect(() => {
     if (!keluhanBaru) return;
-    setOwnComplaints((list) => (list.some((x) => x.id === keluhanBaru.id) ? list : [keluhanBaru, ...list]));
+    muat();
     toast('Keluhan terkirim ke pengelola ✓');
-  }, [keluhanBaru, toast]);
+  }, [keluhanBaru, toast, muat]);
 
   const header = (
     <View style={{ gap: 14, marginBottom: 14 }}>
       <View>
         <Txt style={{ color: C.mut, fontSize: 12 }}>Halo 👋</Txt>
-        <Txt style={s.h1}>Andi Pratama</Txt>
+        <Txt style={s.h1}>{me?.nama ?? ''}</Txt>
       </View>
 
       {/* banner status sewa */}
       <LinearGradient colors={GRAD.primary} start={G_START} end={G_END} style={s.banner}>
         <View style={s.circleA} />
         <View style={s.circleB} />
-        <Txt style={s.bannerSmall}>Sisa masa sewa · Kamar A-03</Txt>
+        <Txt style={s.bannerSmall}>Lama menghuni · Kamar {me?.kamar ?? '-'}</Txt>
         <Txt style={s.big}>
-          47 <Txt style={{ fontSize: 16, fontWeight: '500', color: '#fff' }}>hari</Txt>
+          {me ? Math.max(0, Math.floor((Date.now() - new Date(me.masuk).getTime()) / 86400000)) : 0} <Txt style={{ fontSize: 16, fontWeight: '500', color: '#fff' }}>hari</Txt>
         </Txt>
-        <View style={s.bar}>
-          <View style={[s.barFill, { width: '48%' }]} />
-        </View>
-        <Txt style={[s.bannerSmall, { marginTop: 8 }]}>Berakhir 4 Des 2026</Txt>
+        <Txt style={[s.bannerSmall, { marginTop: 8 }]}>Masuk {me ? tglPanjang(me.masuk) : '-'}</Txt>
         <View style={s.payRow}>
           <Ionicons name="card" size={15} color="#fff" />
-          <Txt style={{ color: '#fff', fontSize: 12, marginLeft: 6, flex: 1 }}>Pembayaran Oktober 2026</Txt>
+          <Txt style={{ color: '#fff', fontSize: 12, marginLeft: 6, flex: 1 }}>Pembayaran {BULAN[new Date().getMonth()]} {new Date().getFullYear()}</Txt>
           <View style={s.payChip}>
             <View style={s.payDot} />
-            <Txt style={{ color: C.ok, fontSize: 12, fontWeight: '700' }}>Lunas</Txt>
+            <Txt style={{ color: lunasIni ? C.ok : C.wn, fontSize: 12, fontWeight: '700' }}>{lunasIni ? 'Lunas' : 'Belum bayar'}</Txt>
           </View>
         </View>
       </LinearGradient>
@@ -478,6 +505,7 @@ export default function PenghuniHomeScreen({ navigation, route }: Props) {
 
 /* ============ TAB "INFO": DAFTAR PENGUMUMAN ============ */
 export function PengumumanScreen() {
+  const ANNOUNCEMENTS = usePengumuman();
   return (
     <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="dark-content" />
@@ -489,7 +517,7 @@ export function PengumumanScreen() {
         ListHeaderComponent={
           <View style={{ marginBottom: 14 }}>
             <Txt style={s.h1}>Pengumuman</Txt>
-            <Txt style={{ color: C.mut, fontSize: 12 }}>Dari pengelola kos · contoh data</Txt>
+            <Txt style={{ color: C.mut, fontSize: 12 }}>Dari pengelola kos</Txt>
           </View>
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
