@@ -285,13 +285,13 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 ![alt text](<Daftar penghuni & filter sewa.gif>)
 
 #### C.3 Tambah Penghuni + Akun Login, Atur Password
-<video controls src="Tambah Penghuni, Akun Login, Atur Password,.mp4" title="Title"></video>
+![alt text](TambahPenghuniAkunLogin.gif)
 
 #### C.4 Edge Function `kelola-akun` di Dashboard Supabase
 ![alt text](<kelola akun di supabase.gif>)
 
 #### C.5 Dashboard Pengelola
-<video controls src="Dashboard Pengelola.mp4" title="Title"></video>
+![alt text](<Dashboard Pengelola.gif>)
 
 ---
 
