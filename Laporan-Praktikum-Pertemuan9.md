@@ -203,7 +203,6 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 | 2 | Seed 35 kamar dan 12 penghuni di Table Editor | Tim | BELUM DIUJI | |
 | 3 | Login pengelola dengan nomor HP via Supabase Auth | Farid | BELUM DIUJI | |
 | 4 | Login penghuni dengan nomor HP via Supabase Auth | Farid | BELUM DIUJI | |
-| 5 | Login pemilik masuk ke Dashboard Pemilik (hanya-baca) | Farid | BELUM DIUJI | |
 | 6 | Login dengan nomor/kata sandi salah menampilkan pesan error | Farid | BELUM DIUJI | |
 | 7 | Penghuni berstatus Keluar ditolak saat login | Farid | BELUM DIUJI | |
 | 8 | Keluar (logout) kembali ke Landing | Farid | BELUM DIUJI | |
@@ -212,19 +211,17 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 | 11 | Keluhan tampil di Beranda penghuni | Dhiyaul | BELUM DIUJI | |
 | 12 | Riwayat tagihan dan status bayar bulan ini tampil dari database | Dhiyaul | BELUM DIUJI | |
 | 13 | Pengumuman tampil dari database | Dhiyaul | BELUM DIUJI | |
-| 14 | Daftar penghuni dari Supabase; HP kosong tampil "-" tanpa tombol WhatsApp | Dawwas | BELUM DIUJI | |
-| 15 | Tambah penghuni sekaligus membuat akun login (Edge Function) | Dawwas | BELUM DIUJI | |
-| 16 | Tambah penghuni ke kamar yang sudah terisi ditolak | Dawwas | BELUM DIUJI | |
-| 17 | Atur Password penghuni, lalu login dengan password baru | Dawwas | BELUM DIUJI | |
-| 18 | Penghuni Keluar (status menjadi Keluar, akun diblokir) | Dawwas | BELUM DIUJI | |
-| 19 | Filter tipe sewa | Dawwas | BELUM DIUJI | |
-| 20 | Ringkasan Dashboard dari database | Dawwas | BELUM DIUJI | |
+| 14 | Daftar penghuni dari Supabase; HP kosong tampil "-" tanpa tombol WhatsApp | Dawwas | LOLOS |![alt text](<Kamar dan penghuni supabase.gif>) |
+| 15 | Tambah penghuni sekaligus membuat akun login (Edge Function) | Dawwas | Lolos |![alt text](<Daftar penghuni & filter sewa.gif>) |
+| 16 | Tambah penghuni ke kamar yang sudah terisi ditolak | Dawwas | Lolos | sudah berhasil jika kamar terisi maka ditolak |
+| 17 | Atur Password penghuni, lalu login dengan password baru | Dawwas | Lolos |berhasil saya sudah nyoba ke penghuni nya |
+| 19 | Filter tipe sewa | Dawwas | Lolos | ![alt text](<Daftar penghuni & filter sewa.gif>) |
+| 20 | Ringkasan Dashboard dari database | Dawwas | Lolos | sudah teruji ada buktinya di c.4 dan c.5 |
 | 21 | Catat pembayaran dan buat kuitansi | Hanifa | BELUM DIUJI | |
 | 22 | Rekap sudah/belum bayar dengan filter bulan dan tahun | Hanifa | BELUM DIUJI | |
 | 23 | Perpindahan tahap keluhan (kanban) tersimpan | Hanifa | BELUM DIUJI | |
 | 24 | Catatan pengelola (tambah dan centang) tersimpan | Hanifa | BELUM DIUJI | |
 | 25 | Keluhan dari penghuni muncul di papan pengelola | Dhiyaul & Hanifa | BELUM DIUJI | |
-| 26 | Pemilik tidak dapat menambah/mengubah data (hanya-baca) | Tim | BELUM DIUJI | |
 | 27 | Penghuni hanya melihat data miliknya (RLS) | Tim | BELUM DIUJI | |
 | 28 | Pembuktian RLS (hapus salah satu policy tulis → gagal, kembalikan → berhasil) | Tim | BELUM DIUJI | |
 | 29 | Edge Function menolak pemanggil selain pengelola | Tim | BELUM DIUJI | |
@@ -282,19 +279,19 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 ### Bagian C: Bukti Modul Data Penghuni & Dashboard (*Dawwas*)
 
 #### C.1 Tabel `kamar` dan `penghuni` di Supabase
-<!-- <div align="center"><img src="docs/bukti-table-penghuni.png" width="75%" alt="Tabel Penghuni Supabase"></div> -->
+![alt text](<Kamar dan penghuni supabase.gif>)
 
 #### C.2 Daftar Penghuni (HP Kosong Tampil "-") dan Filter Tipe Sewa
-<!-- <div align="center"><img src="docs/bukti-daftar-penghuni.gif" width="30%" alt="Daftar dan Filter Penghuni"></div> -->
+![alt text](<Daftar penghuni & filter sewa.gif>)
 
-#### C.3 Tambah Penghuni + Akun Login, Atur Password, dan Penghuni Keluar
-<!-- <div align="center"><img src="docs/bukti-crud-penghuni.gif" width="30%" alt="CRUD Penghuni"></div> -->
+#### C.3 Tambah Penghuni + Akun Login, Atur Password
+![alt text](TambahPenghuniAkunLogin.gif)
 
 #### C.4 Edge Function `kelola-akun` di Dashboard Supabase
-<!-- <div align="center"><img src="docs/bukti-edge-function.png" width="75%" alt="Edge Function kelola-akun"></div> -->
+![alt text](<kelola akun di supabase.gif>)
 
 #### C.5 Dashboard Pengelola
-<!-- <div align="center"><img src="docs/bukti-dashboard.png" width="30%" alt="Dashboard Pengelola"></div> -->
+![alt text](<Dashboard Pengelola.gif>)
 
 ---
 
