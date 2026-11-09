@@ -1,15 +1,24 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { ComponentProps, ComponentType, ReactElement, ReactNode } from 'react';
-import {
-  View, Text, TextInput, Pressable, SectionList, FlatList, Animated, Modal, ScrollView,
-  KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, rupiah, BULAN, tglPendek, tglPanjang } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ComponentType, ReactElement, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  Animated,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { BULAN, rupiah, supabase, tglPanjang, tglPendek } from '../../lib/supabase';
 import type { PenghuniTabParamList } from '../RootNavigator';
 
 /* ============ TIPE ============ */
