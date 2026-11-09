@@ -207,9 +207,9 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 | 7 | Penghuni berstatus Keluar ditolak saat login | Farid | BELUM DIUJI | |
 | 8 | Keluar (logout) kembali ke Landing | Farid | BELUM DIUJI | |
 | 9 | Sesi login dipulihkan setelah aplikasi ditutup dan dibuka ulang | Farid | BELUM DIUJI | |
-| 10 | Kirim keluhan baru dari Lapor Keluhan | Dhiyaul | BELUM DIUJI | |
-| 11 | Keluhan tampil di Beranda penghuni | Dhiyaul | BELUM DIUJI | |
-| 12 | Riwayat tagihan dan status bayar bulan ini tampil dari database | Dhiyaul | BELUM DIUJI | |
+| 10 | Kirim keluhan baru dari Lapor Keluhan | Dhiyaul | Lolos | ![alt text](<keluhan-baru.gif>) |
+| 11 | Keluhan tampil di Beranda penghuni | Dhiyaul | Lolos | ![alt text](<keluhan-baru.gif>)|
+| 12 | Riwayat tagihan dan status bayar bulan ini tampil dari database | Dhiyaul | Lolos | ![alt text](<transaksi.gif>) |
 | 13 | Pengumuman tampil dari database | Dhiyaul | BELUM DIUJI | |
 | 14 | Daftar penghuni dari Supabase; HP kosong tampil "-" tanpa tombol WhatsApp | Dawwas | LOLOS |![alt text](<Kamar dan penghuni supabase.gif>) |
 | 15 | Tambah penghuni sekaligus membuat akun login (Edge Function) | Dawwas | Lolos |![alt text](<Daftar penghuni & filter sewa.gif>) |
