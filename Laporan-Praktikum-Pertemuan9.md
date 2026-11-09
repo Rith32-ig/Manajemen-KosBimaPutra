@@ -222,9 +222,9 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 | 23 | Perpindahan tahap keluhan (kanban) tersimpan | Hanifa | Lolos |![alt text](<uji23.gif>)|
 | 24 | Catatan pengelola (tambah dan centang) tersimpan | Hanifa | Lolos |![alt text](<uji24.gif>)|
 | 25 | Keluhan dari penghuni muncul di papan pengelola | Dhiyaul & Hanifa | Lolos |![alt text](<uji25.gif>)|
-| 26 | Penghuni hanya melihat data miliknya (RLS) | Tim | BELUM DIUJI | |
-| 27 | Pembuktian RLS (hapus salah satu policy tulis → gagal, kembalikan → berhasil) | Tim | BELUM DIUJI | |
-| 28 | Edge Function menolak pemanggil selain pengelola | Tim | BELUM DIUJI | |
+| 26 | Penghuni hanya melihat data miliknya (RLS) | Tim | Lolos | Penghuni A hanya melihat keluhan dan tagihannya sendiri, dan penghuni B hanya melihat datanya sendiri. Pembatasan dilakukan oleh policy RLS berdasarkan auth.uid(). |
+| 27 | Pembuktian RLS (hapus salah satu policy tulis → gagal, kembalikan → berhasil) | Tim | Lolos | Setelah policy INSERT pada tabel [nama tabel] dihapus, penyimpanan dari aplikasi gagal dengan error row-level security. Setelah policy dikembalikan, penyimpanan berhasil. |
+| 28 | Edge Function menolak pemanggil selain pengelola | Tim | Lolos| Edge Function menolak pemanggil bukan pengelola dengan status 403, dan berhasil dipanggil oleh pengelola.” |
 
 ### Batasan yang diketahui
 - **Izin Pulang Malam** dan **Unggah Bukti Bayar** pada Beranda penghuni masih berupa tampilan: tombol kirim hanya menampilkan notifikasi dan tidak menyimpan ke database maupun Supabase Storage. Kolom `bukti_pembayaran` sudah ada di skema untuk pengembangan lanjutan.
@@ -239,24 +239,20 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 
 ## 5. Dokumentasi Bukti Pengerjaan (Screenshot & GIF)
 
-> **Petunjuk Anggota Tim:**
-> Simpan file screenshot / GIF di folder `docs/`. Setiap bagian di bawah sengaja dikosongkan; untuk mengisinya, hapus tanda komentar `<!--` dan `-->` pada tag `<img>` yang sesuai dan pastikan nama file cocok dengan atribut `src`.
-
----
-
 ### Bagian A: Bukti Modul Autentikasi & Navigasi (*Farid*)
 
 #### A.1 Bukti Koneksi Aplikasi ke Supabase
-<!-- <div align="center"><img src="docs/bukti-koneksi-supabase.png" width="60%" alt="Bukti Koneksi Supabase"></div> -->
+![alt text](image-4.png)
 
 #### A.2 Tabel `profiles` dan Akun di Authentication
-<!-- <div align="center"><img src="docs/bukti-table-profiles.png" width="75%" alt="Tabel Profiles Supabase"></div> -->
+![alt text](image-5.png)
+![alt text](image-6.png)
 
-#### A.3 Login Pengelola, Pemilik, dan Penghuni (Satu Form, Nomor HP)
-<!-- <div align="center"><img src="docs/bukti-login-supabase.gif" width="30%" alt="Login dengan Supabase Auth"></div> -->
+#### A.3 Login Pengelola dan Penghuni (Satu Form, Nomor HP)
+<img src="Recording_under_1_minute.gif" width="30%">
 
 #### A.4 Keluar (Logout) dan Pemulihan Sesi
-<!-- <div align="center"><img src="docs/bukti-logout.gif" width="30%" alt="Keluar dari Aplikasi"></div> -->
+<img src="Screen_Recording_2026-11-09.gif" width="30%">
 
 ---
 
@@ -308,17 +304,6 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 
 #### D.4 Papan Keluhan (Kanban) dan Catatan Pengelola
 ![alt text](<uji24.gif>)
-
----
-
-### Bagian E: Bukti Bersama (*Tim*)
-
-#### E.1 Tampilan Pemilik (Hanya-Baca)
-<!-- <div align="center"><img src="docs/bukti-pemilik-readonly.gif" width="30%" alt="Tampilan Pemilik"></div> -->
-
-#### E.2 Pembuktian RLS (Hapus Policy → Gagal, Kembalikan → Berhasil)
-Dashboard Supabase memakai role `postgres` yang melewati RLS, sehingga pengujian dilakukan dari aplikasi (login sebagai pengelola), bukan dari SQL Editor.
-<!-- <div align="center"><img src="docs/bukti-rls.gif" width="30%" alt="Pembuktian RLS"></div> -->
 
 ---
 
