@@ -199,17 +199,17 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 
 | No | Modul / Kriteria Pengujian | Penanggung Jawab | Status | Hasil Pengujian |
 |---|---|---|---|---|
-| 1 | Uji koneksi Supabase (`.env` terbaca, aplikasi berjalan tanpa error `supabaseUrl is required`) | Tim | Lolos | Tidak ada layar merah supabaseUrl is required. Kalau ada kode uji koneksi, terminal menampilkan KONEKSI OK. |
-| 2 | Seed 35 kamar dan 12 penghuni di Table Editor | Tim | Lolos | ![alt text](image-1.png) |
-| 3 | Login pengelola dengan nomor HP via Supabase Auth | Farid | Lolos | <img src="Recording-2026-11-09-101059.gif" width="30%"> |
-| 4 | Login penghuni dengan nomor HP via Supabase Auth | Farid | Lolos | <img src="Recording-2026-11-09-101331.gif" width="30%"> |
-| 5 | Login dengan nomor/kata sandi salah menampilkan pesan error | Farid | Lolos | ![alt text](image-2.png) |
-| 6 | Penghuni berstatus Keluar ditolak saat login | Farid | Lolos | ![alt text](image-3.png)  |
-| 7 | Keluar (logout) kembali ke Landing | Farid | Lolos | Menekan tab Keluar mengembalikan pengguna ke halaman Landing. Tombol kembali tidak membawa ke area dalam, dan menekan Masuk lagi meminta login ulang karena sesi sudah dihapus. |
-| 8 | Sesi login dipulihkan setelah aplikasi ditutup dan dibuka ulang | Farid | Lolos | <img src="Screen_Recording_2026-11-09.gif" width="30%"> |
-| 10 | Kirim keluhan baru dari Lapor Keluhan | Dhiyaul | BELUM DIUJI | |
-| 11 | Keluhan tampil di Beranda penghuni | Dhiyaul | BELUM DIUJI | |
-| 12 | Riwayat tagihan dan status bayar bulan ini tampil dari database | Dhiyaul | BELUM DIUJI | |
+| 1 | Uji koneksi Supabase (`.env` terbaca, aplikasi berjalan tanpa error `supabaseUrl is required`) | Tim | BELUM DIUJI | |
+| 2 | Seed 35 kamar dan 12 penghuni di Table Editor | Tim | BELUM DIUJI | |
+| 3 | Login pengelola dengan nomor HP via Supabase Auth | Farid | BELUM DIUJI | |
+| 4 | Login penghuni dengan nomor HP via Supabase Auth | Farid | BELUM DIUJI | |
+| 6 | Login dengan nomor/kata sandi salah menampilkan pesan error | Farid | BELUM DIUJI | |
+| 7 | Penghuni berstatus Keluar ditolak saat login | Farid | BELUM DIUJI | |
+| 8 | Keluar (logout) kembali ke Landing | Farid | BELUM DIUJI | |
+| 9 | Sesi login dipulihkan setelah aplikasi ditutup dan dibuka ulang | Farid | BELUM DIUJI | |
+| 10 | Kirim keluhan baru dari Lapor Keluhan | Dhiyaul | Lolos | ![alt text](<keluhan-baru.gif>) |
+| 11 | Keluhan tampil di Beranda penghuni | Dhiyaul | Lolos | ![alt text](<keluhan-baru.gif>)|
+| 12 | Riwayat tagihan dan status bayar bulan ini tampil dari database | Dhiyaul | Lolos | ![alt text](<transaksi.gif>) |
 | 13 | Pengumuman tampil dari database | Dhiyaul | BELUM DIUJI | |
 | 14 | Daftar penghuni dari Supabase; HP kosong tampil "-" tanpa tombol WhatsApp | Dawwas | LOLOS |![alt text](<Kamar dan penghuni supabase.gif>) |
 | 15 | Tambah penghuni sekaligus membuat akun login (Edge Function) | Dawwas | Lolos |![alt text](<Daftar penghuni & filter sewa.gif>) |
