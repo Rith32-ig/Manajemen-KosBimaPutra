@@ -1,17 +1,21 @@
 /* === ANGGOTA 2: DHIYAUL (PENGHUNI) — SCREEN 4: LAPOR KELUHAN ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini.
    Setelah dikirim, keluhan diteruskan ke tab "Beranda" lewat params navigasi (keluhanBaru). */
-import React, { useState } from 'react';
-import type { ComponentProps } from 'react';
-import {
-  View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, tglPendek } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps } from 'react';
+import { useState } from 'react';
+import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  KeyboardAvoidingView, Platform,
+  Pressable, ScrollView,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase, tglPendek } from '../../lib/supabase';
 import type { PenghuniTabParamList } from '../RootNavigator';
 import type { Keluhan } from './PenghuniHomeScreen';
 
