@@ -307,17 +307,6 @@ Menginisialisasi `createClient` dengan `EXPO_PUBLIC_SUPABASE_URL` dan `EXPO_PUBL
 
 ---
 
-### Bagian E: Bukti Bersama (*Tim*)
-
-#### E.1 Tampilan Pemilik (Hanya-Baca)
-<!-- <div align="center"><img src="docs/bukti-pemilik-readonly.gif" width="30%" alt="Tampilan Pemilik"></div> -->
-
-#### E.2 Pembuktian RLS (Hapus Policy → Gagal, Kembalikan → Berhasil)
-Dashboard Supabase memakai role `postgres` yang melewati RLS, sehingga pengujian dilakukan dari aplikasi (login sebagai pengelola), bukan dari SQL Editor.
-<!-- <div align="center"><img src="docs/bukti-rls.gif" width="30%" alt="Pembuktian RLS"></div> -->
-
----
-
 ## 6. Kesimpulan
 
 > **Catatan:** sesuaikan kesimpulan ini dengan hasil pengujian yang sebenarnya pada Bagian 4.
