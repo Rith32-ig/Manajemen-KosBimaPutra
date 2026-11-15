@@ -1,16 +1,20 @@
 /* === ANGGOTA 4: HANIFA (PENGELOLA) — SCREEN 8: KELUHAN (KANBAN) ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { ComponentProps, ReactElement } from 'react';
-import {
-  View, Text, TextInput, Pressable, ScrollView, SectionList, Animated, KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { TextProps, TextStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, tglPendek, isPemilik } from '../../lib/supabase';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { TextProps, TextStyle } from 'react-native';
+import {
+  Animated, KeyboardAvoidingView, Platform,
+  Pressable, ScrollView, SectionList,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { isPemilik, supabase, tglPendek } from '../../lib/supabase';
 import type { AdminTabParamList } from '../RootNavigator';
 
 /* ============ TIPE ============ */

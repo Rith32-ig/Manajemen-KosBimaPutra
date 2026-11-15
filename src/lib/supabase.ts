@@ -1,47 +1,123 @@
-import 'react-native-url-polyfill/auto';
+/* Klien Supabase + helper bersama (profil, role, format tampilan).
+   Dipakai oleh src/lib/auth.ts dan semua layar. */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import 'react-native-url-polyfill/auto';
 
-// Hanya publishable/anon key (aman di frontend). Jangan pernah taruh service role key di sini.
-const url = process.env.EXPO_PUBLIC_SUPABASE_URL as string;
-const key = process.env.EXPO_PUBLIC_SUPABASE_KEY as string;
+// Konfigurasi Supabase
+const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const key = process.env.EXPO_PUBLIC_SUPABASE_KEY;
 
-export const supabase = createClient(url, key, {
-  auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false },
-});
-
-export type Role = 'pemilik' | 'pengelola' | 'penghuni';
-export type Profil = { id: string; nama: string; role: Role; nomor_hp: string | null };
-
-// "0812-3456-789" / "+62 812..." -> "+62812..."
-export function keE164(input: string): string | null {
-  let d = input.replace(/\D/g, '');
-  if (d.startsWith('0')) d = '62' + d.slice(1);
-  else if (d.startsWith('8')) d = '62' + d;
-  if (!/^62\d{8,13}$/.test(d)) return null;
-  return '+' + d;
+// Validasi konfigurasi
+if (!url || !key) {
+  throw new Error(
+    'Supabase URL atau Publishable Key tidak ditemukan. Periksa file .env'
+  );
 }
 
-export const rupiah = (n: number | string) => 'Rp ' + String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-export const BULAN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-export const tglPendek = (iso: string) => { const d = new Date(iso); return `${d.getDate()} ${BULAN[d.getMonth()].slice(0, 3)}`; };
-export const tglPanjang = (iso: string) => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')} ${BULAN[d.getMonth()].slice(0, 3)} ${d.getFullYear()}`; };
+// Inisialisasi Supabase
+export const supabase = createClient(url, key, {
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    flowType: 'pkce',
+  },
+});
 
-let _profil: Profil | null = null;
-export const profilSaatIni = () => _profil;
-export const isPemilik = () => _profil?.role === 'pemilik';
+/* ============ PROFIL & ROLE ============ */
+export type Role = 'pemilik' | 'pengelola' | 'penghuni';
 
-export async function keluar() {
-  _profil = null;
+export type Profil = {
+  id: string;
+  nama: string | null;
+  email: string | null;
+  nomor_hp: string | null;
+  role: Role;
+};
+
+// Rute awal per role (penghuni ditangani terpisah di tentukanRute karena perlu cek tautan penghuni)
+export const TARGET = {
+  pengelola: 'AdminTabs',
+  pemilik: 'PemilikTabs',
+} as const;
+
+// Cache profil di memori agar layar tidak query berulang
+let cacheProfil: Profil | null = null;
+
+// Bersihkan cache saat sesi berakhir / pengguna berganti
+supabase.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_OUT' || !session) {
+    cacheProfil = null;
+  } else if (cacheProfil && session.user.id !== cacheProfil.id) {
+    cacheProfil = null;
+  }
+});
+
+// Baca profil dari tabel profiles (role berasal dari database, bukan dari input pengguna)
+export async function ambilProfil(): Promise<Profil | null> {
+  const { data: sesi } = await supabase.auth.getSession();
+  const uid = sesi.session?.user.id;
+  if (!uid) {
+    cacheProfil = null;
+    return null;
+  }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id,nama,email,nomor_hp,role')
+    .eq('id', uid)
+    .maybeSingle();
+  if (error || !data) {
+    cacheProfil = null;
+    return null;
+  }
+  cacheProfil = data as Profil;
+  return cacheProfil;
+}
+
+// Profil dari cache (tanpa query). null bila belum pernah dimuat.
+export const profilSaatIni = (): Profil | null => cacheProfil;
+
+// Pemilik hanya boleh melihat (read-only) di layar pengelola
+export const isPemilik = (): boolean => cacheProfil?.role === 'pemilik';
+
+export async function keluar(): Promise<void> {
+  cacheProfil = null;
   await supabase.auth.signOut();
 }
 
-export async function ambilProfil(): Promise<Profil | null> {
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) { _profil = null; return null; }
-  const { data } = await supabase.from('profiles').select('id,nama,role,nomor_hp').eq('id', u.user.id).maybeSingle();
-  _profil = (data as Profil) ?? null;
-  return _profil;
-}
+/* ============ FORMAT TAMPILAN (tanpa Intl, aman di Hermes Android) ============ */
+export const BULAN = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+];
+const BULAN_PENDEK = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
 
-export const TARGET = { pemilik: 'PemilikTabs', pengelola: 'AdminTabs', penghuni: 'PenghuniTabs' } as const;
+// 1200000 -> "Rp 1.200.000"
+export const rupiah = (n: number | string | null | undefined): string => {
+  const v = Math.round(Number(n) || 0);
+  const s = String(Math.abs(v)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `${v < 0 ? '-' : ''}Rp ${s}`;
+};
+
+// Menerima 'YYYY-MM-DD' (tanpa geser zona waktu), timestamp ISO, atau Date
+const keTanggal = (d: string | Date | null | undefined): Date | null => {
+  if (!d) return null;
+  if (d instanceof Date) return isNaN(d.getTime()) ? null : d;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  const t = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(d);
+  return isNaN(t.getTime()) ? null : t;
+};
+
+// "15 Januari 2026"
+export const tglPanjang = (d: string | Date | null | undefined): string => {
+  const t = keTanggal(d);
+  return t ? `${t.getDate()} ${BULAN[t.getMonth()]} ${t.getFullYear()}` : '-';
+};
+
+// "15 Jan 2026"
+export const tglPendek = (d: string | Date | null | undefined): string => {
+  const t = keTanggal(d);
+  return t ? `${t.getDate()} ${BULAN_PENDEK[t.getMonth()]} ${t.getFullYear()}` : '-';
+};

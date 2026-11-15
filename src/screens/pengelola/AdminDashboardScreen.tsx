@@ -1,15 +1,15 @@
 /* === ANGGOTA 3: DAWWAS (PENGELOLA) — SCREEN 5: DASHBOARD PENGELOLA ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React, { useCallback, useEffect, useState } from 'react';
-import type { ComponentProps, ReactNode } from 'react';
-import { View, Text, Pressable, FlatList, StatusBar, StyleSheet, useWindowDimensions } from 'react-native';
-import type { StyleProp, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { StyleProp, TextProps, TextStyle, ViewStyle } from 'react-native';
+import { FlatList, Pressable, StatusBar, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ambilProfil, BULAN, keluar, profilSaatIni, rupiah, supabase } from '../../lib/supabase';
 import type { AdminTabParamList } from '../RootNavigator';
-import { supabase, rupiah, BULAN, keluar, ambilProfil, profilSaatIni } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -144,7 +144,10 @@ export default function AdminDashboardScreen({ navigation }: Props) {
           <Txt style={s.sub}>{BULAN[bln - 1]} {thn} · Kos Bima Putra, Jl. Perjuangan No. 72</Txt>
           <Txt style={[s.sub, { marginTop: 2 }]}>{pemilik ? 'Pemilik' : 'Pengelola'} · {profil?.nama ?? ''}</Txt>
         </View>
-        <GhostButton title="Keluar" icon="log-out-outline" onPress={doKeluar} />
+        <View style={{ gap: 6 }}>
+          <GhostButton title="Akun" icon="person-circle-outline" onPress={() => navigation.getParent()?.navigate('Akun')} />
+          <GhostButton title="Keluar" icon="log-out-outline" onPress={doKeluar} />
+        </View>
       </View>
 
       <View style={s.kpis}>

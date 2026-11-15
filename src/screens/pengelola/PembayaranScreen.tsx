@@ -325,7 +325,7 @@ export default function PembayaranScreen() {
   const options = RESIDENTS.length ? RESIDENTS.map((r) => `${r.nama} · ${r.kamar}`) : ['(belum ada penghuni)'];
   const [penghuni, setPenghuni] = useState('');
   const penghuniAktif = options.includes(penghuni) ? penghuni : options[0];
-  const [tipe, setTipe] = useState('Bulanan');
+  const tipe = 'Bulanan'; // sistem sewa hanya bulanan
   const [metode, setMetode] = useState('Transfer');
   const [bln, setBln] = useState(BULAN[BLN_INI]);
   const [thn, setThn] = useState(String(THN_INI));
@@ -400,8 +400,6 @@ export default function PembayaranScreen() {
       <Txt style={s.h1}>Catat Pembayaran</Txt>
       <CustomCard style={{ marginTop: 12 }}>
         <Select label="Penghuni" value={penghuniAktif} options={options} onChange={setPenghuni} style={{ marginTop: 0 }} />
-        <FieldLabel>Tipe sewa</FieldLabel>
-        <SegmentedControl options={['Bulanan', 'Harian']} value={tipe} onChange={setTipe} />
         <FieldLabel>Metode</FieldLabel>
         <SegmentedControl options={['Transfer', 'Cash']} value={metode} onChange={setMetode} />
         <View style={s.filterRow}>

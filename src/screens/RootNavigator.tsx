@@ -1,22 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import type { ComponentProps } from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
-import type { NavigatorScreenParams } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import type { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { NavigatorScreenParams } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import type { ComponentProps } from 'react';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 
+import { tentukanRute } from '../lib/auth';
+import { keluar, supabase } from '../lib/supabase';
+import AkunScreen from './AkunScreen';
 import LandingScreen from './LandingScreen';
 import LoginScreen from './LoginScreen';
-import PenghuniHomeScreen, { PengumumanScreen } from './penghuni/PenghuniHomeScreen';
-import type { Keluhan } from './penghuni/PenghuniHomeScreen';
-import LaporKeluhanScreen from './penghuni/LaporKeluhanScreen';
+import LupaPasswordScreen from './LupaPasswordScreen';
+import OtpScreen from './OtpScreen';
 import AdminDashboardScreen from './pengelola/AdminDashboardScreen';
 import DataPenghuniScreen from './pengelola/DataPenghuniScreen';
-import PembayaranScreen from './pengelola/PembayaranScreen';
 import KeluhanAdminScreen from './pengelola/KeluhanAdminScreen';
-import { ambilProfil, keluar, supabase, TARGET } from '../lib/supabase';
+import PembayaranScreen from './pengelola/PembayaranScreen';
+import LaporKeluhanScreen from './penghuni/LaporKeluhanScreen';
+import type { Keluhan } from './penghuni/PenghuniHomeScreen';
+import PenghuniHomeScreen, { PengumumanScreen } from './penghuni/PenghuniHomeScreen';
+import RegisterScreen from './RegisterScreen';
 
 /* ============ TIPE NAVIGASI (dipakai semua layar lewat `import type`) ============ */
 export type PenghuniTabParamList = {
@@ -36,6 +41,10 @@ export type AdminTabParamList = {
 export type RootStackParamList = {
   Landing: undefined;
   Login: undefined;
+  Register: undefined;
+  Otp: { nomor: string };
+  LupaPassword: undefined;
+  Akun: { belumTertaut?: boolean } | undefined;
   AdminTabs: NavigatorScreenParams<AdminTabParamList> | undefined;
   PemilikTabs: NavigatorScreenParams<AdminTabParamList> | undefined;
   PenghuniTabs: NavigatorScreenParams<PenghuniTabParamList> | undefined;
@@ -112,8 +121,9 @@ export default function RootNavigator() {
     (async () => {
       try {
         const { data } = await supabase.auth.getSession();
-        const profil = data.session ? await ambilProfil() : null;
-        setAwal(profil ? TARGET[profil.role] : 'Landing');
+        // role dibaca dari tabel profiles; penghuni baru yang belum ditautkan Pengelola -> layar Akun
+        const r = data.session ? await tentukanRute() : null;
+        setAwal(r && r.ok ? r.route : 'Landing');
       } catch {
         setAwal('Landing');
       }
@@ -132,6 +142,10 @@ export default function RootNavigator() {
     <Stack.Navigator initialRouteName={awal} screenOptions={{ headerShown: false, animation: 'none' }}>
       <Stack.Screen name="Landing" component={LandingScreen} />
       <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="Otp" component={OtpScreen} />
+      <Stack.Screen name="LupaPassword" component={LupaPasswordScreen} />
+      <Stack.Screen name="Akun" component={AkunScreen} />
       <Stack.Screen name="AdminTabs" component={AdminTabs} />
       <Stack.Screen name="PemilikTabs" component={AdminTabs} />
       <Stack.Screen name="PenghuniTabs" component={PenghuniTabs} />

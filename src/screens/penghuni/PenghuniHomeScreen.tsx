@@ -410,9 +410,14 @@ export default function PenghuniHomeScreen({ navigation, route }: Props) {
 
   const header = (
     <View style={{ gap: 14, marginBottom: 14 }}>
-      <View>
-        <Txt style={{ color: C.mut, fontSize: 12 }}>Halo 👋</Txt>
-        <Txt style={s.h1}>{me?.nama ?? ''}</Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
+          <Txt style={{ color: C.mut, fontSize: 12 }}>Halo 👋</Txt>
+          <Txt style={s.h1}>{me?.nama ?? ''}</Txt>
+        </View>
+        <Pressable onPress={() => navigation.getParent()?.navigate('Akun')} hitSlop={10} accessibilityLabel="Akun saya" style={{ padding: 4 }}>
+          <Ionicons name="person-circle-outline" size={34} color={C.acc} />
+        </Pressable>
       </View>
 
       {/* banner status sewa */}
