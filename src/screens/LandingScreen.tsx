@@ -1,15 +1,22 @@
 /* === ANGGOTA 1: FARID — SCREEN 1: LANDING PAGE ===
    File mandiri: UI + komponen kecil + data dummy ada di file ini. */
-import React, { useEffect, useRef } from 'react';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
-import {
-  View, Text, Image, Pressable, FlatList, Animated, StyleSheet, StatusBar, useWindowDimensions,
-} from 'react-native';
-import type { ImageSourcePropType, StyleProp, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useEffect, useRef } from 'react';
+import type { ImageSourcePropType, StyleProp, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  Animated,
+  FlatList,
+  Image, Pressable,
+  StatusBar,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { RootStackParamList } from './RootNavigator';
 
 /* ============ TIPE ============ */

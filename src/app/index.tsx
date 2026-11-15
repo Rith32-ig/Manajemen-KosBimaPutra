@@ -1,6 +1,5 @@
-import React from 'react';
-import { NavigationContainer, NavigationIndependentTree, DefaultTheme } from '@react-navigation/native';
 import type { Theme } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer, NavigationIndependentTree } from '@react-navigation/native';
 import RootNavigator from '../screens/RootNavigator';
 
 const navTheme: Theme = {

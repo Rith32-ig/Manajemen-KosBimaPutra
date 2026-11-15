@@ -1,22 +1,34 @@
 /* === ANGGOTA 3: DAWWAS (PENGELOLA) — SCREEN 6: DATA PENGHUNI ===
    Data dari Supabase: tabel penghuni. */
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import type { ComponentProps, ReactElement, ReactNode } from 'react';
-import {
-  View, Text, TextInput, Pressable, FlatList, Animated, Modal, ScrollView, Linking,
-  KeyboardAvoidingView, Platform, StatusBar, StyleSheet,
-} from 'react-native';
-import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { supabase, tglPanjang, isPemilik } from '../../lib/supabase';
+import { LinearGradient } from 'expo-linear-gradient';
+import type { ComponentProps, ReactElement, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { StyleProp, TextInputProps, TextProps, TextStyle, ViewStyle } from 'react-native';
+import {
+  Animated,
+  FlatList,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StatusBar, StyleSheet,
+  Text, TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { isPemilik, supabase, tglPanjang } from '../../lib/supabase';
 
 /* ============ TIPE ============ */
 type IconName = ComponentProps<typeof Ionicons>['name'];
 type TipeSewa = (typeof TIPE_SEWA)[number];
-type Filter = typeof SEMUA | TipeSewa;
-type Penghuni = { id: string; nama: string; kamar: string; tipe: TipeSewa; hp: string; masuk: string };
+type Penghuni = { id: string; nama: string; kamar: string; tipe: TipeSewa; hp: string; masuk: string; punyaAkun: boolean };
+type Kandidat = { id: string; nama: string; email: string | null; nomor_hp: string | null };
+type AkunLama = { penghuniId: string; password: string; akun: { id: string; nama: string | null; diblokir: boolean } };
+type AksiAkun = 'set_password' | 'keluar' | 'hubungkan';
+type HasilAkun = { ok: boolean; code?: string; pesan?: string; akun?: AkunLama['akun'] };
 
 /* ============ TEMA ============ */
 const C = {
@@ -31,9 +43,8 @@ const G_END = { x: 1, y: 1 };
 const SHADOW_CARD = { shadowColor: '#0F172A', shadowOpacity: 0.07, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
 const SHADOW_BTN = { shadowColor: '#2563EB', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 4 };
 
-const SEMUA = 'Semua tipe sewa';
-const TIPE_SEWA = ['Bulanan', 'Harian'] as const;
-const FILTER_OPTIONS = [SEMUA, ...TIPE_SEWA] as const;
+// Sistem sewa hanya BULANAN (tipe Harian dihapus).
+const TIPE_SEWA = ['Bulanan'] as const;
 
 /* ============ KOMPONEN RE-USABLE ============ */
 function Txt({ style, ...props }: TextProps) {
@@ -100,42 +111,6 @@ function CustomInput({ label, error, leftIcon, style, ...rest }: Omit<TextInputP
         />
       </View>
       {message ? <Txt style={s.errText}>{message}</Txt> : null}
-    </View>
-  );
-}
-
-function Select<T extends string>({ label, value, options, onChange, style }: {
-  label?: string;
-  value: T;
-  options: readonly T[];
-  onChange: (v: T) => void;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <View style={[{ marginTop: 12 }, style]}>
-      {label ? <Txt style={s.label}>{label}</Txt> : null}
-      <Pressable onPress={() => setOpen((o) => !o)} style={[s.field, open && { borderColor: C.acc }]}>
-        <Txt style={{ flex: 1, fontSize: 14 }} numberOfLines={1}>{value}</Txt>
-        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color={C.mut} />
-      </Pressable>
-      {open ? (
-        <View style={s.selList}>
-          {options.map((o, i) => {
-            const on = o === value;
-            return (
-              <Pressable
-                key={o}
-                onPress={() => { onChange(o); setOpen(false); }}
-                style={[s.selOpt, i > 0 && { borderTopWidth: 1, borderTopColor: C.bd }, on && { backgroundColor: C.accb }]}
-              >
-                <Txt style={{ flex: 1, fontSize: 14, color: on ? C.acc : C.txt, fontWeight: on ? '600' : '400' }}>{o}</Txt>
-                {on ? <Ionicons name="checkmark" size={16} color={C.acc} /> : null}
-              </Pressable>
-            );
-          })}
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -209,39 +184,38 @@ export default function DataPenghuniScreen() {
   const muat = useCallback(async () => {
     const { data, error } = await supabase
       .from('penghuni')
-      .select('id,nama,nomor_kamar,tipe_sewa,nomor_hp,tanggal_masuk')
+      .select('id,nama,nomor_kamar,tipe_sewa,nomor_hp,tanggal_masuk,profile_id')
       .eq('status_penghuni', 'Aktif')
       .order('nomor_kamar');
     if (error) { toast('Gagal memuat data: ' + error.message); return; }
     setResidents((data ?? []).map((r) => ({
       id: r.id, nama: r.nama, kamar: r.nomor_kamar, tipe: r.tipe_sewa as TipeSewa,
-      hp: r.nomor_hp || '-', masuk: tglPanjang(r.tanggal_masuk),
+      hp: r.nomor_hp || '-', masuk: tglPanjang(r.tanggal_masuk), punyaAkun: !!r.profile_id,
     })));
   }, [toast]);
   useEffect(() => { muat(); }, [muat]);
 
   const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<Filter>(SEMUA);
   const [open, setOpen] = useState(false);
 
   // form "Tambah Penghuni Baru"
   const [nama, setNama] = useState('');
   const [kamar, setKamar] = useState('');
-  const [tipe, setTipe] = useState<TipeSewa>('Bulanan');
+  const tipe: TipeSewa = 'Bulanan';
   const [hp, setHp] = useState('');
   const [masuk, setMasuk] = useState('');
   const [pass, setPass] = useState('');
   const [kirimWa, setKirimWa] = useState(true);
   const [errNama, setErrNama] = useState<string | null>(null);
 
-  // cari di semua kolom + filter tipe sewa
+  // cari di semua kolom
   const data = residents.filter((r) => {
     const teks = [r.nama, r.kamar, r.tipe, r.hp, r.masuk].join(' ').toLowerCase();
-    return teks.includes(q.toLowerCase()) && (filter === SEMUA || r.tipe === filter);
+    return teks.includes(q.toLowerCase());
   });
 
   const bukaModal = () => {
-    setNama(''); setKamar(''); setTipe('Bulanan'); setHp(''); setMasuk(''); setPass(''); setKirimWa(true); setErrNama(null);
+    setNama(''); setKamar(''); setHp(''); setMasuk(''); setPass(''); setKirimWa(true); setErrNama(null);
     setOpen(true);
   };
 
@@ -261,21 +235,43 @@ export default function DataPenghuniScreen() {
       return;
     }
     setOpen(false);
-    const ak = await kelolaAkun('set_password', baru!.id, pass);
-    toast(ak ? 'Penghuni & akun login dibuat ✓' : 'Penghuni tersimpan, tetapi akun gagal dibuat. Gunakan "Atur Password".');
+    const ak = await aturPassword(baru!.id, pass);
+    // false karena menunggu konfirmasi akun lama -> pop-up konfirmasi tampil, jangan tampilkan pesan gagal
+    if (ak) toast('Penghuni & akun login dibuat ✓');
     muat();
   };
 
   // Edge Function kelola-akun (service role hanya di server)
-  const kelolaAkun = async (action: 'set_password' | 'keluar', id: string, password?: string) => {
-    const { data, error } = await supabase.functions.invoke('kelola-akun', { body: { action, penghuni_id: id, password } });
+  const kelolaAkun = async (
+    action: AksiAkun,
+    id: string,
+    extra: { password?: string; user_id?: string; reaktivasi_akun_id?: string } = {},
+  ): Promise<HasilAkun> => {
+    const { data, error } = await supabase.functions.invoke('kelola-akun', { body: { action, penghuni_id: id, ...extra } });
     if (error || data?.error) {
-      let pesan = data?.error || error?.message || 'gagal';
-      try { const j = await (error as any)?.context?.json?.(); if (j?.error) pesan = j.error; } catch {}
-      toast(pesan);
-      return false;
+      let body: { error?: string; code?: string; akun?: AkunLama['akun'] } | null = data ?? null;
+      try { const j = await (error as any)?.context?.json?.(); if (j) body = j; } catch {}
+      return { ok: false, code: body?.code, akun: body?.akun, pesan: body?.error || error?.message || 'gagal' };
     }
-    return true;
+    return { ok: true };
+  };
+
+  // Nomor HP penghuni sudah punya akun lama (penghuni yang keluar lalu kembali): minta konfirmasi EKSPLISIT Pengelola
+  const [akunLama, setAkunLama] = useState<AkunLama | null>(null);
+
+  // Atur password / buat akun. Akun TIDAK pernah ditautkan otomatis dari nama atau nomor HP.
+  const aturPassword = async (id: string, password: string, reaktivasi?: string): Promise<boolean> => {
+    const r = await kelolaAkun('set_password', id, { password, reaktivasi_akun_id: reaktivasi });
+    if (r.ok) return true;
+    if (r.code === 'AKUN_LAMA' && r.akun) setAkunLama({ penghuniId: id, password, akun: r.akun });
+    else toast(r.pesan ?? 'Gagal');
+    return false;
+  };
+
+  const konfirmasiAkunLama = async () => {
+    if (!akunLama) return;
+    const ok = await aturPassword(akunLama.penghuniId, akunLama.password, akunLama.akun.id);
+    if (ok) { toast('Akun lama diaktifkan kembali & ditautkan ✓'); setAkunLama(null); muat(); }
   };
 
   const [aksiId, setAksiId] = useState<string | null>(null);
@@ -284,9 +280,36 @@ export default function DataPenghuniScreen() {
   const jalankanAksi = async () => {
     if (!aksiId) return;
     if (aksiMode === 'password' && passBaru.length < 8) { toast('Password minimal 8 karakter'); return; }
-    const ok = await kelolaAkun(aksiMode === 'password' ? 'set_password' : 'keluar', aksiId, passBaru);
+    const ok = aksiMode === 'password'
+      ? await aturPassword(aksiId, passBaru)
+      : (await kelolaAkun('keluar', aksiId)).ok;
     if (ok) { toast(aksiMode === 'password' ? 'Password diatur ✓' : 'Penghuni ditandai keluar & akun diblokir ✓'); setAksiId(null); setPassBaru(''); muat(); }
+    else if (aksiMode === 'keluar') toast('Gagal menandai keluar');
   };
+
+  // Hubungkan akun yang sudah terdaftar (email / Google) ke penghuni ini, dipilih manual oleh Pengelola
+  const [hubId, setHubId] = useState<string | null>(null);
+  const [kandidat, setKandidat] = useState<Kandidat[]>([]);
+  const [cariAkun, setCariAkun] = useState('');
+  const [pilih, setPilih] = useState<string | null>(null);
+  const bukaHubungkan = async (id: string) => {
+    setHubId(id); setPilih(null); setCariAkun(''); setKandidat([]);
+    const [{ data: akun }, { data: terpakai }] = await Promise.all([
+      supabase.from('profiles').select('id,nama,email,nomor_hp').eq('role', 'penghuni').order('nama'),
+      supabase.from('penghuni').select('profile_id').eq('status_penghuni', 'Aktif').not('profile_id', 'is', null),
+    ]);
+    const dipakai = new Set((terpakai ?? []).map((x) => x.profile_id));
+    setKandidat((akun ?? []).filter((a) => !dipakai.has(a.id)));
+  };
+  const jalankanHubungkan = async () => {
+    if (!hubId || !pilih) return;
+    const r = await kelolaAkun('hubungkan', hubId, { user_id: pilih });
+    if (!r.ok) { toast(r.pesan ?? 'Gagal menghubungkan akun'); return; }
+    toast('Akun berhasil dihubungkan ✓'); setHubId(null); muat();
+  };
+  const kandidatTampil = kandidat
+    .filter((k) => [k.nama, k.email, k.nomor_hp].join(' ').toLowerCase().includes(cariAkun.toLowerCase()))
+    .slice(0, 20);
 
   const bukaWa = (nomor: string) => {
     const digits = nomor.split('/')[0].replace(/\D/g, '').replace(/^0/, '62');
@@ -301,7 +324,6 @@ export default function DataPenghuniScreen() {
       </View>
       <View style={s.tools}>
         <CustomInput placeholder="Cari nama / kamar…" leftIcon="search" value={q} onChangeText={setQ} style={{ flex: 1, marginTop: 0 }} />
-        <Select value={filter} options={FILTER_OPTIONS} onChange={setFilter} style={{ flex: 1, marginTop: 0 }} />
       </View>
     </View>
   );
@@ -349,8 +371,9 @@ export default function DataPenghuniScreen() {
               <Txt style={s.val}>{item.masuk}</Txt>
             </View>
             {readOnly ? null : (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
                 <CustomButton title="Atur Password" ghost onPress={() => { setAksiMode('password'); setPassBaru(''); setAksiId(item.id); }} />
+                {item.punyaAkun ? null : <CustomButton title="Hubungkan Akun" ghost onPress={() => bukaHubungkan(item.id)} />}
                 <CustomButton title="Penghuni Keluar" ghost onPress={() => { setAksiMode('keluar'); setAksiId(item.id); }} />
               </View>
             )}
@@ -376,6 +399,48 @@ export default function DataPenghuniScreen() {
         <View style={{ marginTop: 16 }}><CustomButton title="Konfirmasi" onPress={jalankanAksi} /></View>
       </Popup>
 
+      {/* pop-up: akun lama ditemukan -> konfirmasi eksplisit */}
+      <Popup visible={!!akunLama} onClose={() => setAkunLama(null)}>
+        <Txt style={{ fontSize: 16, fontWeight: '700' }}>Akun lama ditemukan</Txt>
+        <Txt style={{ marginTop: 10, color: C.mut, lineHeight: 20 }}>
+          Nomor HP ini sudah punya akun dari masa tinggal sebelumnya{akunLama?.akun.nama ? ` (${akunLama.akun.nama})` : ''}
+          {akunLama?.akun.diblokir ? ', saat ini diblokir' : ''}. Data penghuni baru ini tetap terpisah (ID baru) dan riwayat lama tidak ditimpa.
+          {'\n\n'}Aktifkan kembali akun tersebut untuk penghuni ini dan atur password barunya?
+        </Txt>
+        <View style={s.actions}>
+          <CustomButton title="Batal" ghost onPress={() => setAkunLama(null)} />
+          <CustomButton title="Aktifkan kembali" onPress={konfirmasiAkunLama} />
+        </View>
+      </Popup>
+
+      {/* pop-up: hubungkan akun terdaftar (manual) */}
+      <Popup visible={!!hubId} onClose={() => setHubId(null)}>
+        <Txt style={{ fontSize: 16, fontWeight: '700' }}>Hubungkan akun</Txt>
+        <Txt style={{ marginTop: 8, color: C.mut, fontSize: 12, lineHeight: 18 }}>
+          Pilih akun yang sudah mendaftar (email / Google). Penautan dilakukan manual oleh Anda dan tidak pernah otomatis dari kesamaan nama atau nomor HP.
+        </Txt>
+        <CustomInput placeholder="Cari nama / email / nomor HP…" leftIcon="search" value={cariAkun} onChangeText={setCariAkun} />
+        <View style={{ marginTop: 10, maxHeight: 260 }}>
+          <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+            {kandidatTampil.length === 0 ? (
+              <Txt style={{ color: C.mut, textAlign: 'center', paddingVertical: 14 }}>Tidak ada akun yang belum tertaut</Txt>
+            ) : kandidatTampil.map((k) => (
+              <Pressable key={k.id} onPress={() => setPilih(k.id)} style={[s.kand, pilih === k.id && { borderColor: C.acc, backgroundColor: C.accb }]}>
+                <Ionicons name={pilih === k.id ? 'radio-button-on' : 'radio-button-off'} size={18} color={pilih === k.id ? C.acc : C.mut} />
+                <View style={{ flex: 1 }}>
+                  <Txt style={{ fontWeight: '600' }}>{k.nama}</Txt>
+                  <Txt style={{ color: C.mut, fontSize: 12 }}>{[k.email, k.nomor_hp].filter(Boolean).join(' · ') || '-'}</Txt>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+        <View style={s.actions}>
+          <CustomButton title="Batal" ghost onPress={() => setHubId(null)} />
+          <CustomButton title="Hubungkan" onPress={jalankanHubungkan} />
+        </View>
+      </Popup>
+
       {/* pop-up Tambah Penghuni Baru */}
       <Popup visible={open} onClose={() => setOpen(false)}>
         <Txt style={{ fontSize: 16, fontWeight: '700' }}>Tambah Penghuni Baru</Txt>
@@ -388,7 +453,6 @@ export default function DataPenghuniScreen() {
           autoCapitalize="words"
         />
         <CustomInput label="No. Kamar" placeholder="A-12" value={kamar} onChangeText={setKamar} autoCapitalize="characters" />
-        <Select label="Tipe sewa" value={tipe} options={TIPE_SEWA} onChange={setTipe} />
         <CustomInput label="No. HP" placeholder="08xxxxxxxxxx" value={hp} onChangeText={setHp} keyboardType="phone-pad" />
         <CustomInput label="Password awal (min. 8 karakter)" value={pass} onChangeText={setPass} secureTextEntry autoCapitalize="none" />
         <CustomInput label="Tanggal masuk" placeholder="YYYY-MM-DD (kosong = hari ini)" value={masuk} onChangeText={setMasuk} />
@@ -446,5 +510,6 @@ const s = StyleSheet.create({
     shadowColor: '#2563EB', shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 6 }, elevation: 8,
   },
   fabIn: { flex: 1, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  kand: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 10, borderWidth: 1, borderColor: C.bd, borderRadius: 10, marginBottom: 8 },
   actions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 18 },
 });
