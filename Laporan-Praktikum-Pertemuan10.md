@@ -7,10 +7,10 @@
 ### Identitas Proyek & Praktikum
 
 - **Mata Kuliah:** Pemrograman Mobile I
-- **Pertemuan:** [isi nomor pertemuan]
+- **Pertemuan:** 10
 - **Dosen Pengampu:** Mohamad Firdaus, M.Kom
 - **Tanggal Praktikum:** November 2026
-- **Kelas / Kelompok:** [isi kelas] / Kelompok 4
+- **Kelompok:** Kelompok 4
 - **Pembagian Tugas Anggota Kelompok:**
   1. **Farid:** Login dengan Google — `masukGoogle()`, rute `/auth/callback`, tombol Google pada Login, penentuan tujuan setelah login (`tentukanRute`), dan konfigurasi Google Cloud / Supabase.
   2. **Dhiyaul:** Registrasi dan Akun Pengguna — layar Registrasi (anti akun ganda), layar Akun (Hubungkan Google, ubah password / email / nomor HP).
@@ -28,16 +28,7 @@
 
 ---
 
-## Video Flow
-Drive : [isi tautan]
-
-Youtube : [isi tautan]
-
----
-
-## 1. Revisi: Penambahan Akun Penghuni pada CRUD Pengelola
-
-**Catatan revisi dari dosen:** [isi catatan revisi]
+## 1. Revisi: melengkapi CRUD 
 
 ### 1.1 Yang Ditambahkan
 
@@ -63,16 +54,20 @@ Membuat dan memblokir akun membutuhkan hak admin, sehingga dijalankan di server 
 ### 1.3 Bukti Revisi (*Dawwas*)
 
 **Tambah penghuni + akun login, lalu login dengan akun tersebut**
-<div align="center"><img src="docs/bukti-tambah-penghuni-akun.gif" width="30%" alt="Tambah penghuni dan akun login"></div>
+
+<img src="Recording_1_under_1_min.gif" width="30%">
 
 **Atur password dan konfirmasi akun lama**
-<div align="center"><img src="docs/bukti-atur-password-akun-lama.gif" width="30%" alt="Atur password dan akun lama"></div>
+
+<img src="ScreenRecording2026-11-16102657-ezgif.com-video-to-gif-converter.gif" width="30%">
 
 **Hubungkan akun terdaftar ke penghuni**
-<div align="center"><img src="docs/bukti-hubungkan-akun.gif" width="30%" alt="Hubungkan akun"></div>
+
+<img src="" width="30%">
 
 **Penghuni keluar dan akun diblokir**
-<div align="center"><img src="docs/bukti-penghuni-keluar.gif" width="30%" alt="Penghuni keluar"></div>
+
+<img src="Recording_2_under_1_min.gif" width="30%">
 
 ---
 
@@ -124,33 +119,30 @@ flowchart TD
 ### 2.4 Bukti Login Google (*Farid*)
 
 **Provider Google dan Redirect URLs di dashboard Supabase** *(sembunyikan Client Secret)*
-<div align="center"><img src="docs/bukti-provider-google.png" width="75%" alt="Provider Google"></div>
-<div align="center"><img src="docs/bukti-redirect-urls.png" width="75%" alt="Redirect URLs"></div>
+
+![alt text](image-7.png)
+
+![alt text](image-8.png)
 
 **Login dengan Google hingga masuk aplikasi**
-<div align="center"><img src="docs/bukti-login-google.gif" width="30%" alt="Login Google"></div>
 
 **Akun Google tercatat di Authentication → Users**
-<div align="center"><img src="docs/bukti-auth-users.png" width="75%" alt="Authentication Users"></div>
+
+![alt text](image-9.png)
 
 ### 2.5 Bukti Registrasi dan Akun Pengguna (*Dhiyaul*)
 
 **Registrasi email, dan email yang sudah dipakai Google ditolak**
-<div align="center"><img src="docs/bukti-registrasi-akun.gif" width="30%" alt="Registrasi email"></div>
 
 **Akun baru belum tertaut, dihubungkan pengelola, lalu login kembali**
-<div align="center"><img src="docs/bukti-google-hubungkan.gif" width="30%" alt="Akun Google dihubungkan pengelola"></div>
 
 **Hubungkan Google dan ubah password dari layar Akun**
-<div align="center"><img src="docs/bukti-layar-akun.gif" width="30%" alt="Layar Akun"></div>
 
 ### 2.6 Bukti Lupa Password dan OTP (*Hanifa*)
 
 **Lupa password: tautan email membuka form password baru**
-<div align="center"><img src="docs/bukti-lupa-password.gif" width="30%" alt="Lupa password"></div>
 
 **Login OTP SMS dan penguncian setelah kode salah berulang**
-<div align="center"><img src="docs/bukti-otp.gif" width="30%" alt="Login OTP"></div>
 
 ---
 
@@ -163,7 +155,5 @@ flowchart TD
 ---
 
 ## 4. Kesimpulan
-
-[Isi setelah pengujian selesai: hal yang berhasil, kendala beserta perbaikannya, dan apakah revisi dan fitur Google sudah tercapai.]
 
 Pada pembaruan ini, pengelola dapat menambah penghuni sekaligus akun login, mengatur ulang password, menghubungkan akun yang sudah terdaftar secara manual, dan menandai penghuni keluar dengan memblokir akunnya, seluruhnya lewat Edge Function sehingga `service_role` key tidak berada di aplikasi. Pengguna juga dapat masuk dengan Google melalui Supabase OAuth, dengan peran selalu dibaca dari tabel `profiles` dan akun baru dihubungkan oleh pengelola sebelum dapat mengakses data penghuni.
