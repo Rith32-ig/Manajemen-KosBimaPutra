@@ -63,7 +63,7 @@ Membuat dan memblokir akun membutuhkan hak admin, sehingga dijalankan di server 
 
 **Hubungkan akun terdaftar ke penghuni**
 
-<img src="" width="30%">
+<img src="ScreenRecording_11-16-2026 11-21-12_1.gif" width="30%">
 
 **Penghuni keluar dan akun diblokir**
 
@@ -126,6 +126,8 @@ flowchart TD
 
 **Login dengan Google hingga masuk aplikasi**
 
+<img src="ScreenRecording_11-16-2026 11-35-23_1.gif" width="30%">
+
 **Akun Google tercatat di Authentication → Users**
 
 ![alt text](image-9.png)
@@ -134,15 +136,26 @@ flowchart TD
 
 **Registrasi email, dan email yang sudah dipakai Google ditolak**
 
+<img src="ScreenRecording_11-16-2026 11-24-29_1.gif" width="30%">
+
 **Akun baru belum tertaut, dihubungkan pengelola, lalu login kembali**
 
+<img src="ScreenRecording_11-22-2026 03-49-52_1.gif" width="30%">
+
 **Hubungkan Google dan ubah password dari layar Akun**
+
+<img src="ScreenRecording_11-22-2026 03-55-24_1.gif" width="30%">
+
 
 ### 2.6 Bukti Lupa Password dan OTP (*Hanifa*)
 
 **Lupa password: tautan email membuka form password baru**
 
-**Login OTP SMS dan penguncian setelah kode salah berulang**
+<img src="ScreenRecording_11-16-2026 11-28-05_1.gif" width="30%">
+
+**Login OTP Email dan penguncian setelah kode salah berulang**
+
+Otp sudah bisa di jalankan dalam aplikasi namun memerlukkan biaya per sms otp yang menjadi bloker
 
 ---
 
